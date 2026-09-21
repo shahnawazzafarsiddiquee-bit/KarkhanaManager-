@@ -5,7 +5,6 @@
     document.querySelectorAll(".nav-btn").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
     document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === view + "View"));
     document.querySelectorAll(".view").forEach((v) => v.classList.toggle("hidden", v.id !== view + "View"));
-    document.getElementById("mainNav").classList.remove("nav-open");
   }
 
   function wireNav() {
@@ -13,9 +12,6 @@
       const btn = e.target.closest(".nav-btn");
       if (!btn) return;
       switchView(btn.dataset.view);
-    });
-    document.getElementById("mobileMenuBtn").addEventListener("click", () => {
-      document.getElementById("mainNav").classList.toggle("nav-open");
     });
   }
 

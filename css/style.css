@@ -146,7 +146,6 @@ label {
 }
 .nav-btn.active { background: var(--primary); color: #fff; }
 .topbar-actions { display: flex; align-items: center; gap: 8px; }
-.mobile-only { display: none; }
 
 main#views { padding: 20px; max-width: 1100px; margin: 0 auto; }
 .view h2 { margin-top: 0; }
@@ -258,12 +257,9 @@ th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 720px) {
-  .tabs { order: 3; width: 100%; overflow-x: auto; }
-  .mobile-only { display: inline-block; }
-}
-
-@media (max-width: 480px) {
-  .tabs { display: none; flex-direction: column; }
-  .tabs.nav-open { display: flex; }
-  .nav-btn { width: 100%; text-align: left; }
+  .topbar { padding: 10px 14px; }
+  /* Full-width row under the brand: all four tabs stay reachable by thumb. */
+  .tabs { order: 3; width: 100%; gap: 2px; }
+  .nav-btn { flex: 1; text-align: center; padding: 10px 4px; font-size: 0.82rem; }
+  main#views { padding: 16px 14px; }
 }
