@@ -1,4 +1,4 @@
-const CACHE_NAME = "karakhana-v1";
+const CACHE_NAME = "karakhana-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -32,25 +32,24 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Cache-first for our own static files only. Firebase/Auth/Firestore/CDN
-// requests are left untouched so auth + live data always hit the network.
+// Network-first for our own static files, so a redeploy reaches the browser on
+// the next load; the cache is the offline fallback. Cache-first would pin an
+// old build - including firebase-config.js - until the cache name changed.
+// Firebase/Auth/Firestore/CDN requests are left untouched.
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin || event.request.method !== "GET") {
     return;
   }
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const networkFetch = fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || networkFetch;
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      })
+      .catch(async () => (await caches.match(event.request)) || Response.error())
   );
 });
