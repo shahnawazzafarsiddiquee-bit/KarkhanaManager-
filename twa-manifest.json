@@ -1,0 +1,38 @@
+{
+  "packageId": "com.brotherscreation.karkhanamanager",
+  "host": "shahnawazzafarsiddiquee-bit.github.io",
+  "name": "Karakhana Manager",
+  "launcherName": "Karakhana",
+  "display": "standalone",
+  "themeColor": "#1f6feb",
+  "themeColorDark": "#0f151c",
+  "navigationColor": "#1f6feb",
+  "navigationColorDark": "#0f151c",
+  "navigationDividerColor": "#1f6feb",
+  "navigationDividerColorDark": "#0f151c",
+  "backgroundColor": "#f4f6f9",
+  "enableNotifications": false,
+  "startUrl": "/KarkhanaManager-/index.html",
+  "iconUrl": "https://shahnawazzafarsiddiquee-bit.github.io/KarkhanaManager-/icons/icon-512.png",
+  "maskableIconUrl": "https://shahnawazzafarsiddiquee-bit.github.io/KarkhanaManager-/icons/icon-512.png",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://shahnawazzafarsiddiquee-bit.github.io/KarkhanaManager-/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://shahnawazzafarsiddiquee-bit.github.io/KarkhanaManager-/",
+  "minSdkVersion": 21,
+  "orientation": "default",
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "upload"
+  }
+}
