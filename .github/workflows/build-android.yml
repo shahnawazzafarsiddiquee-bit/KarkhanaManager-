@@ -29,18 +29,20 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
-      # Written up front so Bubblewrap uses the runner's JDK/SDK instead of
-      # prompting to download its own (prompts hang a CI run).
+      # The runner ships an Android SDK already; setup-android only re-fetches
+      # it and fails on the retired 'tools' package. Writing the config up front
+      # also stops Bubblewrap prompting to download its own JDK/SDK, which would
+      # hang the run.
       - name: Configure Bubblewrap
         run: |
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "Using Android SDK at $SDK"
+          ls "$SDK"
           mkdir -p ~/.bubblewrap
-          printf '{"jdkPath":"%s","androidSdkPath":"%s"}\n' "$JAVA_HOME" "$ANDROID_SDK_ROOT" > ~/.bubblewrap/config.json
+          printf '{"jdkPath":"%s","androidSdkPath":"%s"}\n' "$JAVA_HOME" "$SDK" > ~/.bubblewrap/config.json
           cat ~/.bubblewrap/config.json
 
       - name: Restore signing keystore
