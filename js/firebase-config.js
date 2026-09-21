@@ -1,21 +1,16 @@
 /**
- * ===== FIREBASE CONFIG (PLACEHOLDER) =====
- * 1. Go to https://console.firebase.google.com -> Create Project
- * 2. Project settings -> General -> "Your apps" -> Add a Web app (</>)
- * 3. Copy the config object Firebase gives you and paste the VALUES below
- *    (replace every "REPLACE_ME_..." string).
- * 4. In the Firebase console:
- *    - Authentication -> Sign-in method -> enable "Email/Password"
- *    - Firestore Database -> Create database (start in production mode)
- *      and paste the rules from firestore.rules into the Rules tab.
+ * Firebase project config. These values are public by design - they identify
+ * the project in browser requests; access is controlled by firestore.rules.
+ * To point the app at a different project, replace this block with the config
+ * from Firebase console -> Project settings -> Your apps -> SDK setup (Config).
  */
 const firebaseConfig = {
-  apiKey: "REPLACE_ME_API_KEY",
-  authDomain: "REPLACE_ME_PROJECT_ID.firebaseapp.com",
-  projectId: "REPLACE_ME_PROJECT_ID",
-  storageBucket: "REPLACE_ME_PROJECT_ID.appspot.com",
-  messagingSenderId: "REPLACE_ME_SENDER_ID",
-  appId: "REPLACE_ME_APP_ID",
+  apiKey: "AIzaSyA6OL_f_AdHmuAMTrp1DxoURjk0luQZWEk",
+  authDomain: "karkhana-maneger.firebaseapp.com",
+  projectId: "karkhana-maneger",
+  storageBucket: "karkhana-maneger.firebasestorage.app",
+  messagingSenderId: "493590521831",
+  appId: "1:493590521831:web:065fc4e76c56b4d9f3bf42",
 };
 
 firebase.initializeApp(firebaseConfig);

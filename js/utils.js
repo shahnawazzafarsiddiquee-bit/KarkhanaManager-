@@ -54,6 +54,8 @@
       "auth/wrong-password": "Password galat hai.",
       "auth/invalid-credential": "Email ya password galat hai.",
       "auth/too-many-requests": "Bahut zyada attempts ho gaye, thodi der baad try karein.",
+      "auth/operation-not-allowed": "Firebase console mein Email/Password sign-in enable nahi hai.",
+      "auth/network-request-failed": "Internet connection check karein.",
     };
     return map[err && err.code] || (err && err.message) || "Kuch galat ho gaya, dobara try karein.";
   }
