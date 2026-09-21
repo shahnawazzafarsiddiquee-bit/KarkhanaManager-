@@ -1,0 +1,17 @@
+rules_version = '2';
+
+// Paste this into Firebase Console -> Firestore Database -> Rules.
+// Every document lives under businesses/{uid}, so a signed-in user can only
+// ever read or write their OWN business's data (karigars, vyaparis, and
+// every nested sub-collection: workLogs, sampleWork, payments, etc).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /businesses/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      match /{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+  }
+}
