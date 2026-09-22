@@ -118,19 +118,53 @@ Save the file. That's the only code change needed to go live.
 > `<username>.github.io` (it's usually added automatically, but check if
 > sign-in fails with a domain error).
 
-## 6. Generate an Android APK/AAB with PWABuilder
+## 6. Build the Android APK and AAB
 
-1. Open <https://www.pwabuilder.com>.
-2. Paste your live GitHub Pages URL and click **Start**.
-3. PWABuilder scans `manifest.json` + `sw.js` (already included in this
-   project) and shows a PWA score. Fix any warnings it flags (commonly: swap
-   the placeholder icons in `icons/` for your real logo at 192x192 and
-   512x512 PNG — PWABuilder can also auto-generate these for you from one
-   image if you don't have your own).
-4. Go to the **Package for stores → Android** tab → choose **Google Play**
-   (or "Trusted Web Activity") → download the package. You'll get both an
-   **APK** (for direct install/testing) and an **AAB** (for Play Store
-   upload).
+`.github/workflows/build-android.yml` wraps the deployed site as a Trusted
+Web Activity with [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap)
+and produces both files. Run it from **Actions → Build Android APK & AAB →
+Run workflow**; it attaches `karakhana-manager.apk` and
+`karakhana-manager.aab` to the `latest` release.
+
+`twa-manifest.json` holds the app's identity — package id, name, colors,
+`startUrl`. The version code comes from the workflow run number, so every
+run is a higher version than the last, which is what Play requires.
+
+### Signing secrets
+
+Add these under **Settings → Secrets and variables → Actions**:
+
+| Secret | Value |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | the keystore as one line of base64 (~3700 characters) |
+| `ANDROID_KEYSTORE_PASSWORD` | keystore password |
+| `ANDROID_KEY_PASSWORD` | key password |
+
+The keystore itself is never committed. To create one and print the base64:
+
+```
+keytool -genkeypair -v -keystore upload-keystore.jks -alias upload \
+  -keyalg RSA -keysize 2048 -validity 10000
+base64 -w0 upload-keystore.jks
+```
+
+Keep `upload-keystore.jks` and its password backed up somewhere safe. Lose
+them and you can never ship an update to the same Play listing.
+
+`.well-known/assetlinks.json` carries the SHA-256 fingerprint of that
+certificate, which is how Android verifies the app owns the site and drops
+the browser address bar. Change the signing key and the fingerprint there
+must change too:
+
+```
+keytool -list -v -keystore upload-keystore.jks -alias upload | grep SHA256
+```
+
+`.nojekyll` is what makes GitHub Pages serve that dot-directory at all.
+
+> Running the workflow with **use test key** checked signs with a key
+> generated inside the run. That is only for checking the build works — the
+> artifacts are not published and cannot be updated later.
 
 ## 7. Publish the AAB to Google Play
 
@@ -138,12 +172,18 @@ Save the file. That's the only code change needed to go live.
    <https://play.google.com/console>.
 2. Create a new app → fill in store listing (title, description, screenshots,
    privacy policy URL, etc. — required by Play Store).
-3. **Production → Create new release** → upload the `.aab` file PWABuilder
-   generated → fill release notes → **Review release** → **Start rollout**.
+3. **Production → Create new release** → upload `karakhana-manager.aab` from
+   the `latest` release → fill release notes → **Review release** →
+   **Start rollout**.
 4. Play Store review typically takes a few hours to a few days.
 
 This last step is manual on Google's side and can't be automated — Play
 Console requires your own developer account and human review.
+
+> With Play App Signing, Google re-signs the app with its own key, so the
+> fingerprint in `.well-known/assetlinks.json` must be replaced with the one
+> Play Console shows under **Setup → App signing**. Until then the installed
+> app still works, but it shows the browser address bar.
 
 ---
 
