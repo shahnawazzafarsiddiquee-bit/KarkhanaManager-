@@ -56,7 +56,13 @@ jobs:
           fi
           # Copying the base64 by hand tends to introduce line breaks; strip all
           # whitespace so those don't fail the decode.
-          if ! printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > android.keystore 2>/dev/null; then
+          cleaned=$(printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]')
+          # Shape only - never the value - so a bad paste can be told apart from
+          # a truncated one without leaking key material into the log.
+          echo "Secret length after whitespace strip: ${#cleaned} (expected 3704)"
+          stray=$(printf '%s' "$cleaned" | tr -d 'A-Za-z0-9+/=' | wc -c)
+          echo "Characters outside the base64 alphabet: $stray"
+          if ! printf '%s' "$cleaned" | base64 -d > android.keystore 2>/dev/null; then
             echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64 - re-copy the whole line into the secret."
             exit 1
           fi
