@@ -2,6 +2,11 @@ name: Build Android APK & AAB
 
 on:
   workflow_dispatch:
+    inputs:
+      use_test_key:
+        description: 'Sign with a throwaway key to smoke-test the pipeline. Artifacts are NOT published and cannot go to Play.'
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -45,7 +50,20 @@ jobs:
           printf '{"jdkPath":"%s","androidSdkPath":"%s"}\n' "$JAVA_HOME" "$SDK" > ~/.bubblewrap/config.json
           cat ~/.bubblewrap/config.json
 
+      # Pipeline smoke test: proves everything downstream works while the real
+      # keystore secret is still being sorted out. The key lives and dies with
+      # the run, so nothing it signs can be shipped or upgraded later.
+      - name: Generate throwaway keystore
+        if: ${{ inputs.use_test_key }}
+        run: |
+          echo "::warning::Signing with a throwaway key - these artifacts are for testing the build only."
+          keytool -genkeypair -v -keystore android.keystore -alias upload \
+            -keyalg RSA -keysize 2048 -validity 30 \
+            -storepass testkey123 -keypass testkey123 \
+            -dname "CN=Karakhana Test, O=Test, C=IN"
+
       - name: Restore signing keystore
+        if: ${{ !inputs.use_test_key }}
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -89,8 +107,8 @@ jobs:
 
       - name: Build APK and AAB
         env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ inputs.use_test_key && 'testkey123' || secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ inputs.use_test_key && 'testkey123' || secrets.ANDROID_KEY_PASSWORD }}
         run: bubblewrap build --skipPwaValidation
 
       - name: Show build output
@@ -99,12 +117,13 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: karakhana-android
+          name: ${{ inputs.use_test_key && 'karakhana-android-TEST-KEY' || 'karakhana-android' }}
           path: |
             *.apk
             *.aab
 
       - name: Publish release
+        if: ${{ !inputs.use_test_key }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
