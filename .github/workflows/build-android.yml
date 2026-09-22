@@ -46,6 +46,19 @@ jobs:
           SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           echo "Using Android SDK at $SDK"
           ls "$SDK"
+          # Bubblewrap accepts an SDK only if it has tools/ or bin/ at the root.
+          # Current SDKs put those under cmdline-tools/<version>/bin instead, so
+          # link the newest one into place.
+          if [ ! -d "$SDK/bin" ] && [ ! -d "$SDK/tools" ]; then
+            CMDLINE_BIN=$(ls -d "$SDK"/cmdline-tools/*/bin 2>/dev/null | tail -1)
+            if [ -z "$CMDLINE_BIN" ]; then
+              echo "::error::No cmdline-tools/*/bin found under $SDK"
+              exit 1
+            fi
+            echo "Linking $SDK/bin -> $CMDLINE_BIN"
+            sudo ln -sfn "$CMDLINE_BIN" "$SDK/bin"
+          fi
+          ls -la "$SDK/bin" | head -3
           mkdir -p ~/.bubblewrap
           printf '{"jdkPath":"%s","androidSdkPath":"%s"}\n' "$JAVA_HOME" "$SDK" > ~/.bubblewrap/config.json
           cat ~/.bubblewrap/config.json
