@@ -12,6 +12,8 @@
   "navigationDividerColorDark": "#0f151c",
   "backgroundColor": "#f4f6f9",
   "enableNotifications": false,
+  "splashScreenFadeOutDuration": 300,
+  "launchHandlerClientMode": "",
   "startUrl": "/KarkhanaManager-/index.html",
   "iconUrl": "https://shahnawazzafarsiddiquee-bit.github.io/KarkhanaManager-/icons/icon-512.png",
   "maskableIconUrl": "https://shahnawazzafarsiddiquee-bit.github.io/KarkhanaManager-/icons/icon-512.png",
