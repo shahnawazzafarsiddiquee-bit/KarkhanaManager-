@@ -20,12 +20,15 @@ js/utils.js              Shared helpers (currency, date, toast, escaping)
 js/store.js              On-device data store (localStorage) + shared state
 js/profile.js            Business name / owner name setup and editing
 js/theme.js               Dark/light toggle
-js/pdf.js                 jsPDF: karigar statement, vyapari challan, hisaab report
+js/pdf.js                 jsPDF: statement, challan, hisaab report, poora hisaab (with logo)
 js/karigar.js              Karigar module (list, ledger, calculations, WhatsApp, PDF)
 js/vyapari.js               Vyapari module (lot value, payments received, filters, PDF challan)
 js/dashboard.js              Home: month ka hisaab (munafa), stat cards, backup reminder
 js/kharcha.js                 Factory kharcha (expenses) by month and category
 js/report.js                  Hafte/mahine ka karigar hisaab (WhatsApp + PDF)
+js/hazri.js                   Karigar hazri (present / half day / absent)
+js/lock.js                    4-digit PIN lock + auto-lock
+js/settings.js                Setting tab: company logo, PIN
 js/backup.js                  Backup share/download + import
 js/app.js                       Bootstraps everything and routing
 manifest.json                   PWA manifest
@@ -49,9 +52,19 @@ icons/icon.svg, icon-192.png, icon-512.png   App icons (placeholders - swap with
 - Search + filter (All / Unpaid)
 - WhatsApp summary share, PDF statement with your business letterhead
 
+**Hazri** (Karigar tab → 📅 Hazri)
+- Roz har karigar: Present / Half day / Absent (wahi button dobara = hat jaata hai)
+- "Sabko Present" ek tap mein, pichhle/agle din pe ja sakte hain
+- Mahine ki hazri table; half day = aadha din. Hisaab report aur statement PDF mein bhi
+
+**Maal diya / wapas aaya** (karigar ledger → Maal tab)
+- Karigar ko kitne pcs diye, kitne bana ke laaya, kitne abhi uske paas
+- Entry kisi vyapari ke lot se jod sakte hain → us lot pe "Taiyaar 30/50 pcs"
+- Karigar card aur Home pe "maal paas mein"
+
 **Karigar hisaab report** (Karigar tab → 📊 Hisaab)
 - Is hafta / Pichhla hafta / Is mahina / Pichhla mahina, ya apni dates
-- Har karigar: pieces, kamai, kharchi, diya, aur kul baaki (shuru se ab tak)
+- Har karigar: hazri, pieces, kamai, kharchi, diya, aur kul baaki (shuru se ab tak)
 - Total row, WhatsApp share, PDF
 
 **Vyapari module**
@@ -59,19 +72,35 @@ icons/icon.svg, icon-192.png, icon-512.png   App icons (placeholders - swap with
   total meters, color, design, due date, notes
 - Lot value apne aap: `50 pcs × ₹80 = ₹4,000` — card aur challan dono pe dikhta hai
 - Vyapari se mila paisa: kitni bhi baar (date, amount, note) → Mila / Baaki
+- Vyapari ka phone + "📱 Baaki paise ka reminder" (WhatsApp pe lot, mila, baaki)
+- 🧵 Kapda stock: kitne meter aaya, kitna kata, kitna bacha
+- Lot ki progress: karigar ko kitna diya, kitna taiyaar ho ke aaya
 - Delivery status (pending/delivered), lot-received (+date/note)
 - Search + filter (All / Pending / Overdue / Baaki)
-- PDF challan with letterhead, lot value, payments list, LOT/PAYMENT stamps,
-  signature lines
+- PDF challan with letterhead, lot value, taiyaar pcs, kapda stock, payments,
+  LOT/PAYMENT stamps, signature lines
 
 **Kharcha + Munafa**
 - Kharcha tab: kiraya, bijli, dhaga/maal, machine repair, chai-nashta, transport,
   staff salary, other — month-wise total aur category-wise
 - Home pe "Mahine ka hisaab": vyapari se mila − karigar ko diya − kharcha = munafa
   (jis mahine paisa aaya/gaya usi mahine mein ginti)
+- Pichhle 6 mahine ka graph (aaya vs gaya, har mahine ka munafa)
+- 📄 Poora hisaab PDF: mahine ka munafa, lena-dena baaki, saare karigar,
+  saare vyapari/lot, kharcha — ek hi file
 
-**Backup**
-- 📤 Backup bhejein: phone ka share sheet (WhatsApp / Drive / email) pe seedha file
+**Home alerts**
+- ⏰ Jin lots ki delivery kal/aaj hai ya late ho gayi — tap karke seedha record khulta hai
+
+**Setting**
+- 🏷️ Company logo (gallery se) — har PDF aur app header mein
+- 🔒 4 ank ka PIN: app kholne pe aur 2 minute se zyada background mein rehne ke
+  baad maangta hai; 5 galat try pe 30 second rukna. PIN bhoolne pe business
+  name + owner name likh ke hata sakte hain. PIN sirf isi phone pe rehta hai
+  (backup mein nahi jaata) aur yeh screen lock hai, data ko encrypt nahi karta.
+
+**Backup** (Setting tab)
+- 📤 Backup bhejo: phone ka share sheet (WhatsApp / Drive / email) pe seedha file
 - Download aur Import bhi (import purane data ke saath jud jaata hai)
 - 7 din se backup nahi liya to Home pe yaad dilata hai
 
@@ -179,7 +208,7 @@ Console requires your own developer account and human review.
    letterhead, lot value, payments and green "DONE"/red "PENDING" stamps.
 8. **Kharcha tab** → add an expense → Home pe "Mahine ka hisaab" mein munafa
    update hota hai. **Karigar tab → 📊 Hisaab** → hafte ka report, PDF/WhatsApp.
-9. **Backup tab → 📤 Backup bhejo** (or Download) → your full business data
+9. **Setting tab → 📤 Backup bhejo** (or Download) → your full business data
    as a `.json` file. Open the app in another browser or phone and **Import**
    that file to confirm restore works.
 10. Toggle the 🌙/☀️ button in the header to confirm dark/light theme, and
@@ -192,7 +221,7 @@ Console requires your own developer account and human review.
   WhatsApp platform restriction, not something a web app can bypass).
 - **Data lives on one device.** Nothing is sent to a server, so the app
   works fully offline, but clearing the browser's site data, uninstalling the
-  app or losing the phone loses the data. The Backup tab's file is the
+  app or losing the phone loses the data. The backup file (Setting tab) is the
   only copy that can survive that - take one regularly.
 - Deleting a karigar also deletes their work log / sample work / payment
   history — this is intentional (Delete is a destructive action with a

@@ -49,6 +49,8 @@
       KM.dashboard.render(data);
       KM.kharcha.render(data);
       KM.report.update(data);
+      KM.hazri.update(data);
+      KM.settings.update(data);
       KM.backup.update(data);
     });
     KM.state.unsubscribers.push(unsubKarigars, unsubVyaparis, unsubAll);
@@ -80,11 +82,14 @@
     KM.dashboard.init();
     KM.kharcha.init();
     KM.report.init();
+    KM.hazri.init();
     KM.backup.init();
+    KM.lock.init();
+    KM.settings.init();
     registerServiceWorker();
 
     KM.state.business = await KM.db.getBusiness();
-    if (KM.state.business) showApp();
+    if (KM.state.business) KM.lock.require(showApp);
     else KM.profile.open(false);
   }
 

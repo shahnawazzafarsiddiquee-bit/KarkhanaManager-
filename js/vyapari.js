@@ -1,6 +1,7 @@
 (function () {
   const KM = window.KM || (window.KM = {});
-  const { escapeHtml, formatCurrency, formatDate, todayStr, toast, vyapariMoney } = KM.utils;
+  const { escapeHtml, formatCurrency, formatDate, todayStr, toast, vyapariMoney, fabricCount, waLink } = KM.utils;
+  const meters = (n) => `${Math.round((Number(n) || 0) * 100) / 100} m`;
 
   const state = { search: "", filter: "all", currentId: null };
 
@@ -25,9 +26,17 @@
       : `<span class="badge badge-paid">Paisa poora</span>`;
   }
 
+  // "Taiyaar" = pieces karigars brought back against this lot.
+  function progressLine(v, progress) {
+    const p = progress[v.id];
+    if (!p) return "";
+    return `Taiyaar ${p.wapas}${v.lotPcs ? "/" + v.lotPcs : ""} pcs`;
+  }
+
   function render() {
     const list = document.getElementById("vyapariList");
     if (!list) return;
+    const progress = KM.db.lotProgress();
     const search = state.search.trim().toLowerCase();
     const items = KM.state.vyaparis.filter((v) => {
       if (search) {
@@ -50,7 +59,8 @@
             : `<span class="badge badge-pending">Pending</span>`;
           const overdueBadge = isOverdue(v) ? `<span class="badge badge-overdue">Overdue</span>` : "";
           const rate = Number(v.ratePerPc) ? `${v.lotPcs || 0} pcs × ${formatCurrency(v.ratePerPc)}/pc` : "";
-          const sub = [rate, v.design && escapeHtml(v.design), v.dueDate && `Due ${formatDate(v.dueDate)}`]
+          const sub = [rate, progressLine(v, progress), v.design && escapeHtml(v.design),
+            v.dueDate && `Due ${formatDate(v.dueDate)}`]
             .filter(Boolean).join(" · ");
           return `
           <div class="entity-card" data-id="${v.id}">
@@ -77,17 +87,35 @@
     const modalOpen = !document.getElementById("vyapariFormModal").classList.contains("hidden");
     if (modalOpen && state.currentId) {
       const v = KM.state.vyaparis.find((x) => x.id === state.currentId);
-      if (v) renderPayments(v);
+      if (v) renderRecord(v);
     }
   }
 
-  function renderPayments(v) {
+  function renderRecord(v) {
     const m = vyapariMoney(v);
-    document.getElementById("vyapariMoneySummary").innerHTML = m.total > 0
+    const p = KM.db.lotProgress()[v.id];
+    const progressRows = p
+      ? `<div class="money-row"><span>Karigar ko diya</span><b>${p.diya} pcs</b></div>
+         <div class="money-row"><span>Taiyaar ho ke aaya</span><b>${p.wapas}${v.lotPcs ? " / " + v.lotPcs : ""} pcs</b></div>`
+      : "";
+    document.getElementById("vyapariMoneySummary").innerHTML = (m.total > 0
       ? `<div class="money-row"><span>Lot</span><b>${lotLine(v)}</b></div>
          <div class="money-row"><span>Mila</span><b class="money-ok">${formatCurrency(m.received)}</b></div>
          <div class="money-row"><span>Baaki</span><b class="${m.balance > 0 ? "money-due" : "money-ok"}">${formatCurrency(Math.max(m.balance, 0))}</b></div>`
-      : `<p class="muted">Neeche Lot Pieces aur ek piece ka rate bhariye, tab baaki raqam dikhegi.</p>`;
+      : `<p class="muted">Neeche Lot Pieces aur ek piece ka rate bhariye, tab baaki raqam dikhegi.</p>`) + progressRows;
+    document.getElementById("vyapariRemindBtn").classList.toggle("hidden", m.balance <= 0);
+
+    const f = fabricCount(v.fabricStock);
+    document.getElementById("fabricSummary").innerHTML =
+      `Aaya: <b>${meters(f.aaya)}</b> · Kata: <b>${meters(f.kata)}</b> · Bacha: <b class="${f.bacha < 0 ? "money-due" : "money-ok"}">${meters(f.bacha)}</b>`;
+    const fabricRows = [...(v.fabricStock || [])].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    document.querySelector("#fabricTable tbody").innerHTML = fabricRows.length
+      ? fabricRows.map((x) => `<tr>
+          <td>${formatDate(x.date)}</td><td>${x.type === "cut" ? "✂️ Kata" : "📦 Aaya"}</td><td>${meters(x.meters)}</td>
+          <td>${escapeHtml(x.note)}</td>
+          <td><button class="row-delete" data-fabric="${x.id}">✕</button></td>
+        </tr>`).join("")
+      : `<tr><td colspan="5" class="muted">Abhi kapda nahi likha</td></tr>`;
 
     const rows = [...(v.payments || [])].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
     document.querySelector("#vyapariPayTable tbody").innerHTML = rows.length
@@ -112,6 +140,7 @@
     document.getElementById("vyapariFormId").value = v ? v.id : "";
     document.getElementById("vyapariFormTitle").textContent = v ? v.trader : "Naya Vyapari";
     document.getElementById("vyapariTrader").value = v ? v.trader || "" : "";
+    document.getElementById("vyapariPhone").value = v ? v.phone || "" : "";
     document.getElementById("vyapariFabric").value = v ? v.fabric || "" : "";
     document.getElementById("vyapariLotPcs").value = v ? v.lotPcs || 0 : 0;
     document.getElementById("vyapariRatePerPc").value = v ? v.ratePerPc || 0 : 0;
@@ -134,7 +163,10 @@
     document.getElementById("vyapariPaySection").classList.toggle("hidden", !v);
     document.getElementById("vyapariPayForm").reset();
     document.getElementById("vyapariPayDate").value = todayStr();
-    if (v) renderPayments(v);
+    document.getElementById("fabricForm").reset();
+    document.getElementById("fabricDate").value = todayStr();
+    document.getElementById("vyapariStock").open = !!v && (v.fabricStock || []).length > 0;
+    if (v) renderRecord(v);
 
     // Keep the optional section collapsed unless this record already uses it.
     const extras = ["fabric", "color", "sizes", "colorMeters", "totalMeters", "notes",
@@ -146,6 +178,7 @@
   function collectForm() {
     return {
       trader: document.getElementById("vyapariTrader").value.trim(),
+      phone: document.getElementById("vyapariPhone").value.trim(),
       fabric: document.getElementById("vyapariFabric").value.trim(),
       lotPcs: Number(document.getElementById("vyapariLotPcs").value) || 0,
       ratePerPc: Number(document.getElementById("vyapariRatePerPc").value) || 0,
@@ -195,6 +228,51 @@
     toast("Payment add ho gaya");
   }
 
+  async function handleFabricSubmit(e) {
+    e.preventDefault();
+    try {
+      await KM.db.addFabric(state.currentId, {
+        date: document.getElementById("fabricDate").value,
+        type: document.getElementById("fabricType").value,
+        meters: document.getElementById("fabricMeters").value,
+        note: document.getElementById("fabricNote").value,
+      });
+    } catch (err) {
+      toast(err.message || "Save nahi ho paya", true);
+      return;
+    }
+    e.target.reset();
+    document.getElementById("fabricDate").value = todayStr();
+    toast("Kapda entry add ho gayi");
+  }
+
+  async function handleFabricDelete(e) {
+    const btn = e.target.closest(".row-delete");
+    if (!btn) return;
+    if (!confirm("Yeh kapda entry delete karein?")) return;
+    await KM.db.deleteFabric(state.currentId, btn.dataset.fabric);
+  }
+
+  function sendReminder() {
+    const v = KM.state.vyaparis.find((x) => x.id === state.currentId);
+    if (!v) return;
+    const m = vyapariMoney(v);
+    const b = KM.state.business || {};
+    const lot = [v.design, lotLine(v)].filter(Boolean).join(" - ");
+    const lines = [
+      `*${b.businessName || "Karakhana Manager"}*`,
+      `Namaste ${v.trader} ji,`,
+      "",
+      `Lot: ${lot}`,
+      `Mila: ${formatCurrency(m.received)}`,
+      `*Baaki: ${formatCurrency(Math.max(m.balance, 0))}*`,
+      "",
+      "Kripya baaki payment jaldi bhej dijiye. Dhanyavaad 🙏",
+      b.ownerName ? `- ${b.ownerName}` : "",
+    ].filter((l, i, all) => l || all[i - 1]);
+    window.open(waLink(v.phone, lines.join("\n").trim()), "_blank");
+  }
+
   async function handlePayDelete(e) {
     const btn = e.target.closest(".row-delete");
     if (!btn) return;
@@ -231,6 +309,9 @@
     document.getElementById("vyapariForm").addEventListener("submit", handleFormSubmit);
     document.getElementById("vyapariPayForm").addEventListener("submit", handlePaySubmit);
     document.getElementById("vyapariPayTable").addEventListener("click", handlePayDelete);
+    document.getElementById("fabricForm").addEventListener("submit", handleFabricSubmit);
+    document.getElementById("fabricTable").addEventListener("click", handleFabricDelete);
+    document.getElementById("vyapariRemindBtn").addEventListener("click", sendReminder);
     document.getElementById("deleteVyapariBtn").addEventListener("click", handleDelete);
     document.getElementById("vyapariPdfBtn").addEventListener("click", downloadPdf);
 
@@ -248,5 +329,10 @@
     });
   }
 
-  KM.vyapari = { init, render, isOverdue };
+  function open(id) {
+    const v = KM.state.vyaparis.find((x) => x.id === id);
+    if (v) openForm(v);
+  }
+
+  KM.vyapari = { init, render, isOverdue, open };
 })();

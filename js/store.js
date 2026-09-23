@@ -26,8 +26,11 @@
   const byDateDesc = (a, b) => (b.date || "").localeCompare(a.date || "");
 
   const KEY = "km-data-v1";
-  const SUBS = ["workLogs", "sampleWork", "payments"];
-  const emptyData = () => ({ business: null, karigars: [], vyaparis: [], expenses: [], lastBackupAt: null });
+  const SUBS = ["workLogs", "sampleWork", "payments", "maal", "attendance"];
+  const HAZRI = ["P", "H", "A"]; // present, half day, absent
+  const emptyData = () => ({
+    business: null, logo: null, karigars: [], vyaparis: [], expenses: [], lastBackupAt: null,
+  });
 
   // Vyapari money used to be a single "payment received" tick. It is now a
   // list of payments; a record ticked as paid becomes one payment of the
@@ -54,9 +57,16 @@
 
   function normalize(d) {
     const out = { ...emptyData(), ...d };
-    out.karigars = out.karigars || [];
+    out.karigars = (out.karigars || []).map((k) => {
+      SUBS.forEach((sub) => { k[sub] = k[sub] || []; });
+      return k;
+    });
     out.expenses = out.expenses || [];
-    out.vyaparis = (out.vyaparis || []).map(migrateVyapari);
+    out.vyaparis = (out.vyaparis || []).map((v) => {
+      migrateVyapari(v);
+      v.fabricStock = v.fabricStock || [];
+      return v;
+    });
     return out;
   }
 
@@ -112,6 +122,8 @@
       workLogs: [],
       sampleWork: [],
       payments: [],
+      maal: [],
+      attendance: [],
     };
   }
 
@@ -128,6 +140,20 @@
   });
   const makeExpense = (d) => ({
     id: newId(), date: d.date, category: d.category || "Other", amount: Number(d.amount) || 0,
+    note: d.note || "", createdAt: now(),
+  });
+  // Pieces handed to a karigar ("diya") or brought back finished ("wapas"),
+  // optionally against a vyapari's lot.
+  const makeMaal = (d) => ({
+    id: newId(), date: d.date, type: d.type === "wapas" ? "wapas" : "diya", pcs: Number(d.pcs) || 0,
+    vyapariId: d.vyapariId || "", note: d.note || "", createdAt: now(),
+  });
+  const makeAttendance = (d) => ({
+    id: newId(), date: d.date, status: HAZRI.includes(d.status) ? d.status : "P", createdAt: now(),
+  });
+  // Fabric for a vyapari's lot: meters received ("in") or cut/used ("cut").
+  const makeFabric = (d) => ({
+    id: newId(), date: d.date, type: d.type === "cut" ? "cut" : "in", meters: Number(d.meters) || 0,
     note: d.note || "", createdAt: now(),
   });
   const findVyapari = (id) => data.vyaparis.find((v) => v.id === id);
@@ -182,6 +208,25 @@
     async addWorkLog(karigarId, d) { addToKarigar(karigarId, "workLogs", makeWorkLog(d)); },
     async addSampleWork(karigarId, d) { addToKarigar(karigarId, "sampleWork", makeSample(d)); },
     async addPayment(karigarId, d) { addToKarigar(karigarId, "payments", makePayment(d)); },
+    async addMaal(karigarId, d) { addToKarigar(karigarId, "maal", makeMaal(d)); },
+
+    // One mark per karigar per day; an empty status clears the day.
+    async setAttendance(karigarId, date, status) {
+      const k = findKarigar(karigarId);
+      if (!k || !date) return;
+      k.attendance = k.attendance.filter((a) => a.date !== date);
+      if (HAZRI.includes(status)) k.attendance.push(makeAttendance({ date, status }));
+      commit();
+    },
+
+    async setAttendanceAll(date, status) {
+      if (!date || !HAZRI.includes(status)) return;
+      data.karigars.forEach((k) => {
+        k.attendance = k.attendance.filter((a) => a.date !== date);
+        k.attendance.push(makeAttendance({ date, status }));
+      });
+      commit();
+    },
 
     async deleteSubEntry(karigarId, sub, entryId) {
       const k = findKarigar(karigarId);
@@ -206,17 +251,17 @@
     },
 
     async addVyapari(d) {
-      const v = { ...d, id: newId(), createdAt: now(), payments: [] };
+      const v = { ...d, id: newId(), createdAt: now(), payments: [], fabricStock: [] };
       data.vyaparis.push(v);
       commit();
       return v.id;
     },
 
-    // Payments are managed separately, so an edit never touches them.
+    // Payments and fabric stock are managed separately, so an edit never touches them.
     async updateVyapari(id, d) {
       const v = findVyapari(id);
       if (!v) return;
-      const { payments, id: _id, createdAt, ...fields } = d;
+      const { payments, fabricStock, id: _id, createdAt, ...fields } = d;
       Object.assign(v, fields);
       commit();
     },
@@ -240,6 +285,31 @@
       commit();
     },
 
+    async addFabric(vyapariId, d) {
+      const v = findVyapari(vyapariId);
+      if (!v) throw new Error("Vyapari nahi mila.");
+      v.fabricStock.push(makeFabric(d));
+      commit();
+    },
+
+    async deleteFabric(vyapariId, entryId) {
+      const v = findVyapari(vyapariId);
+      if (!v) return;
+      v.fabricStock = v.fabricStock.filter((f) => f.id !== entryId);
+      commit();
+    },
+
+    // vyapariId -> pieces given to karigars and brought back, across everyone.
+    lotProgress() {
+      const out = {};
+      data.karigars.forEach((k) => k.maal.forEach((m) => {
+        if (!m.vyapariId) return;
+        const p = out[m.vyapariId] || (out[m.vyapariId] = { diya: 0, wapas: 0 });
+        p[m.type] += Number(m.pcs) || 0;
+      }));
+      return out;
+    },
+
     // ---- expenses ----
     async addExpense(d) {
       data.expenses.push(makeExpense(d));
@@ -261,6 +331,12 @@
       return { ...copy(data), exportedAt: now() };
     },
 
+    // Company logo as a small data: URL; null removes it.
+    async saveLogo(dataUrl) {
+      data.logo = dataUrl || null;
+      commit();
+    },
+
     async markBackedUp() {
       data.lastBackupAt = now();
       commit();
@@ -271,20 +347,30 @@
       payload = normalize(payload);
       let karigarCount = 0;
       let vyapariCount = 0;
+      // Imported records get fresh ids, so maal entries must follow their lot.
+      const vyapariIds = {};
+      for (const src of payload.vyaparis) {
+        const { id, createdAt, payments, fabricStock, ...rest } = src;
+        const v = {
+          ...rest, id: newId(), createdAt: createdAt || now(),
+          payments: payments.map(makePayment), fabricStock: fabricStock.map(makeFabric),
+        };
+        if (id) vyapariIds[id] = v.id;
+        data.vyaparis.push(v);
+        vyapariCount++;
+      }
       for (const src of payload.karigars) {
         const k = makeKarigar(src);
-        k.workLogs = (src.workLogs || []).map(makeWorkLog);
-        k.sampleWork = (src.sampleWork || []).map(makeSample);
-        k.payments = (src.payments || []).map(makePayment);
+        k.workLogs = src.workLogs.map(makeWorkLog);
+        k.sampleWork = src.sampleWork.map(makeSample);
+        k.payments = src.payments.map(makePayment);
+        k.maal = src.maal.map((m) => makeMaal({ ...m, vyapariId: vyapariIds[m.vyapariId] || "" }));
+        k.attendance = src.attendance.map(makeAttendance);
         data.karigars.push(k);
         karigarCount++;
       }
-      for (const src of payload.vyaparis) {
-        const { id, createdAt, payments, ...rest } = src;
-        data.vyaparis.push({ ...rest, id: newId(), createdAt: createdAt || now(), payments: payments.map(makePayment) });
-        vyapariCount++;
-      }
       data.expenses.push(...payload.expenses.map(makeExpense));
+      if (!data.logo && payload.logo) data.logo = payload.logo;
       if (!data.business && payload.business && payload.business.businessName) {
         data.business = {
           businessName: payload.business.businessName,

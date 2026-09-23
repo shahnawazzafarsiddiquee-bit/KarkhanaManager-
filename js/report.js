@@ -1,6 +1,6 @@
 (function () {
   const KM = window.KM || (window.KM = {});
-  const { escapeHtml, formatCurrency, formatDate, dateStr } = KM.utils;
+  const { escapeHtml, formatCurrency, formatDate, dateStr, hazriCount } = KM.utils;
 
   let data = null;
   let report = { rows: [], totals: null, label: "" };
@@ -48,6 +48,7 @@
         const samples = (k.sampleWork || []).filter(inRange);
         return {
           name: k.name,
+          hazri: hazriCount((k.attendance || []).filter(inRange)).days,
           pieces: sum(work, (w) => w.pieces) + sum(samples, (s) => s.qty),
           earned: sum(work, (w) => w.pieces * w.rate) + sum(samples, (s) => s.qty * s.rate),
           advance: sum(work, (w) => w.advance),
@@ -55,9 +56,10 @@
           balance: KM.karigar.computeTotals(k).remaining,
         };
       })
-      .filter((r) => r.pieces || r.earned || r.advance || r.paid || r.balance)
+      .filter((r) => r.hazri || r.pieces || r.earned || r.advance || r.paid || r.balance)
       .sort((a, b) => a.name.localeCompare(b.name));
     const totals = {
+      hazri: sum(rows, (r) => r.hazri),
       pieces: sum(rows, (r) => r.pieces),
       earned: sum(rows, (r) => r.earned),
       advance: sum(rows, (r) => r.advance),
@@ -74,13 +76,13 @@
     const { rows, totals } = report;
     el("reportTable").querySelector("tbody").innerHTML = rows.length
       ? rows.map((r) => `<tr>
-          <td>${escapeHtml(r.name)}</td><td>${r.pieces}</td><td>${formatCurrency(r.earned)}</td>
+          <td>${escapeHtml(r.name)}</td><td>${r.hazri}</td><td>${r.pieces}</td><td>${formatCurrency(r.earned)}</td>
           <td>${formatCurrency(r.advance)}</td><td>${formatCurrency(r.paid)}</td>
           <td class="${r.balance > 0 ? "money-due" : "money-ok"}"><b>${formatCurrency(Math.max(r.balance, 0))}</b></td>
         </tr>`).join("")
-      : `<tr><td colspan="6" class="muted">In dino mein koi kaam ya payment nahi</td></tr>`;
+      : `<tr><td colspan="7" class="muted">In dino mein koi kaam ya payment nahi</td></tr>`;
     el("reportTable").querySelector("tfoot").innerHTML = rows.length
-      ? `<tr><th>Total</th><th>${totals.pieces}</th><th>${formatCurrency(totals.earned)}</th>
+      ? `<tr><th>Total</th><th>${totals.hazri}</th><th>${totals.pieces}</th><th>${formatCurrency(totals.earned)}</th>
           <th>${formatCurrency(totals.advance)}</th><th>${formatCurrency(totals.paid)}</th>
           <th>${formatCurrency(totals.balance)}</th></tr>`
       : "";
@@ -96,7 +98,7 @@
     const business = KM.state.business ? KM.state.business.businessName : "Karakhana Manager";
     const lines = [`*${business}*`, `Karigar hisaab: ${label}`, ""];
     rows.forEach((r) => {
-      lines.push(`${r.name}: ${r.pieces} pcs, kamai ${formatCurrency(r.earned)}, kharchi ${formatCurrency(r.advance)}, diya ${formatCurrency(r.paid)} → baaki ${formatCurrency(Math.max(r.balance, 0))}`);
+      lines.push(`${r.name}: ${r.hazri ? `${r.hazri} din, ` : ""}${r.pieces} pcs, kamai ${formatCurrency(r.earned)}, kharchi ${formatCurrency(r.advance)}, diya ${formatCurrency(r.paid)} → baaki ${formatCurrency(Math.max(r.balance, 0))}`);
     });
     lines.push("", `*Kul dena baaki: ${formatCurrency(totals ? totals.balance : 0)}*`);
     window.open(`https://wa.me/?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
