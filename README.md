@@ -126,8 +126,12 @@ After that every **Build Android APK & AAB** run signs with this key.
 > that before the app is on Play.
 
 `.well-known/assetlinks.json` is how Android verifies the app owns the site
-and hides the browser address bar; `.nojekyll` is what makes GitHub Pages
-serve that dot-directory at all.
+and hides the browser address bar. Android only reads it from the **domain
+root** (`https://shahnawazzafarsiddiquee-bit.github.io/.well-known/assetlinks.json`),
+not from this repo's `/KarkhanaManager-/` path, so the live copy lives in the
+`shahnawazzafarsiddiquee-bit.github.io` repo. The copy here is the one the
+signing workflow writes; whenever it changes, copy it to that repo too.
+`.nojekyll` is what makes GitHub Pages serve that dot-directory at all.
 
 > Running the workflow with **use test key** checked signs with a key
 > generated inside the run. That is only for checking the build works — the
@@ -148,9 +152,10 @@ This last step is manual on Google's side and can't be automated — Play
 Console requires your own developer account and human review.
 
 > With Play App Signing, Google re-signs the app with its own key, so the
-> fingerprint in `.well-known/assetlinks.json` must be replaced with the one
-> Play Console shows under **Setup → App signing**. Until then the installed
-> app still works, but it shows the browser address bar.
+> SHA-256 that Play Console shows under **Setup → App signing** must be
+> **added** to `sha256_cert_fingerprints` in the root `assetlinks.json`
+> (keep the upload key's one too, so directly installed APKs still verify).
+> Until then the Play Store app works, but it shows the browser address bar.
 
 ---
 
