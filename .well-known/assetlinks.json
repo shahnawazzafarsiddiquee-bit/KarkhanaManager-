@@ -1,11 +1,13 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.brotherscreation.karkhanamanager",
       "sha256_cert_fingerprints": [
-        "F9:63:64:03:2F:85:8C:29:2F:B8:79:C0:D5:BC:DF:F3:EC:F4:C6:9D:C2:82:74:7E:4D:59:FE:02:72:47:F0:B7"
+        "BE:48:45:F2:6B:32:3D:98:E4:48:85:36:29:66:F2:99:36:CE:24:93:91:91:37:A9:5D:D7:98:5F:51:6D:87:73"
       ]
     }
   }
