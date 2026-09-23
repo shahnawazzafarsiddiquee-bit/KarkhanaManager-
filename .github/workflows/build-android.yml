@@ -74,6 +74,7 @@ jobs:
             -keyalg RSA -keysize 2048 -validity 30 \
             -storepass testkey123 -keypass testkey123 \
             -dname "CN=Karakhana Test, O=Test, C=IN"
+          echo "SIGNING_PASSWORD=testkey123" >> "$GITHUB_ENV"
 
       - name: Restore signing keystore
         if: ${{ !inputs.use_test_key }}
@@ -85,9 +86,11 @@ jobs:
             echo "::error::ANDROID_KEYSTORE_BASE64 is not set. Add the signing secrets before running this workflow."
             exit 1
           fi
-          # Copying the base64 by hand tends to introduce line breaks; strip all
-          # whitespace so those don't fail the decode.
-          cleaned=$(printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]')
+          # Values copied out of a chat pick up line breaks and the backticks or
+          # quotes around code; none of those are valid in either secret.
+          sanitize() { printf '%s' "$1" | tr -d '[:space:]`"'"'"; }
+          cleaned=$(sanitize "$KEYSTORE_BASE64")
+          KEYSTORE_PASSWORD=$(sanitize "$KEYSTORE_PASSWORD")
           # Shape only - never the value - so a bad paste can be told apart from
           # a truncated one without leaking key material into the log.
           echo "Secret length after whitespace strip: ${#cleaned} (expected 3704)"
@@ -102,6 +105,9 @@ jobs:
             echo "::error::Keystore did not open with alias 'upload' and ANDROID_KEYSTORE_PASSWORD - check both secrets."
             exit 1
           fi
+          echo "::add-mask::$KEYSTORE_PASSWORD"
+          # PKCS12 keystores share one password between store and key.
+          echo "SIGNING_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
           echo "Keystore verified."
 
       - name: Stamp version from run number
@@ -119,10 +125,10 @@ jobs:
         run: bubblewrap update --skipVersionUpgrade
 
       - name: Build APK and AAB
-        env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ inputs.use_test_key && 'testkey123' || secrets.ANDROID_KEYSTORE_PASSWORD }}
-          BUBBLEWRAP_KEY_PASSWORD: ${{ inputs.use_test_key && 'testkey123' || secrets.ANDROID_KEY_PASSWORD }}
-        run: bubblewrap build --skipPwaValidation
+        run: |
+          BUBBLEWRAP_KEYSTORE_PASSWORD="$SIGNING_PASSWORD" \
+          BUBBLEWRAP_KEY_PASSWORD="$SIGNING_PASSWORD" \
+            bubblewrap build --skipPwaValidation
 
       - name: Show build output
         run: ls -la *.apk *.aab 2>/dev/null || (echo "No APK/AAB produced"; ls -la; exit 1)

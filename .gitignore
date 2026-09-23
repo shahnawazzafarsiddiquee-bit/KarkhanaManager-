@@ -1,0 +1,3 @@
+# Unencrypted signing material - only signing/*.jks.enc belongs in git
+*.jks
+*.keystore
