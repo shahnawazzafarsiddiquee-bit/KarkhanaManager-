@@ -164,23 +164,13 @@
   }
 
   // ---- Detail / ledger modal ----
-  // Today's date and the karigar's usual rate, so a normal day's entry is
-  // just the piece count.
+  // Rate is typed every time on purpose - it varies by job - so only the
+  // date is defaulted.
   function fillEntryDefaults(formId) {
-    const k = KM.state.karigars.find((x) => x.id === KM.state.currentKarigarId);
-    const rate = k && k.defaultRate ? k.defaultRate : "";
-    const form = document.getElementById(formId);
-    form.reset();
-    if (formId === "workLogForm") {
-      document.getElementById("workDate").value = todayStr();
-      document.getElementById("workRate").value = rate;
-      document.getElementById("workAdvance").value = 0;
-    } else if (formId === "sampleWorkForm") {
-      document.getElementById("sampleDate").value = todayStr();
-      document.getElementById("sampleRate").value = rate;
-    } else {
-      document.getElementById("paymentDate").value = todayStr();
-    }
+    document.getElementById(formId).reset();
+    const dateId = { workLogForm: "workDate", sampleWorkForm: "sampleDate", paymentForm: "paymentDate" }[formId];
+    document.getElementById(dateId).value = todayStr();
+    if (formId === "workLogForm") document.getElementById("workAdvance").value = 0;
   }
 
   function openDetail(id) {
