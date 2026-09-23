@@ -157,3 +157,22 @@ jobs:
             --title "Latest build ${{ github.run_number }} (APK + AAB)" \
             --notes "APK: phone par sidha install. AAB: Google Play Console par upload." \
             --latest
+
+      # A throwaway-key APK is still useful for installing and using the app
+      # before the real key is in place - the app itself is the website, so it
+      # picks up every later change without a reinstall. It goes to its own
+      # pre-release, APK only (a test-key AAB is useless to Play), so it can
+      # never be mistaken for the "latest" store build.
+      - name: Publish test APK
+        if: ${{ inputs.use_test_key }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp "$(ls *.apk | head -1)" karakhana-manager-TEST.apk
+          gh release delete test-build --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes || true
+          gh release create test-build karakhana-manager-TEST.apk \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Test APK (build ${{ github.run_number }}) - Play Store ke liye nahi" \
+            --notes "Phone pe install karke use kariye. Test key se signed hai: Play Store pe upload nahi hoga, aur upar browser ki address bar dikhegi. Pakki key lagne ke baad 'latest' release mein asli APK/AAB aayega." \
+            --prerelease
