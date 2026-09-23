@@ -37,13 +37,13 @@
     };
   }
 
-  function subscribeKarigarSub(uid, id) {
+  function subscribeKarigarSub(id) {
     if (state.subUnsubs[id]) return; // already subscribed
     state.subData[id] = { workLogs: [], sampleWork: [], payments: [] };
     const subs = ["workLogs", "sampleWork", "payments"];
     state.subUnsubs[id] = {};
     subs.forEach((sub) => {
-      state.subUnsubs[id][sub] = KM.db.listenKarigarSub(uid, id, sub, (rows) => {
+      state.subUnsubs[id][sub] = KM.db.listenKarigarSub(id, sub, (rows) => {
         state.subData[id][sub] = rows;
         state.totals[id] = computeTotals(state.subData[id]);
         render();
@@ -62,17 +62,14 @@
     delete state.totals[id];
   }
 
-  function syncSubscriptions(uid) {
+  function syncSubscriptions() {
     const activeIds = new Set(KM.state.karigars.map((k) => k.id));
-    activeIds.forEach((id) => subscribeKarigarSub(uid, id));
+    activeIds.forEach((id) => subscribeKarigarSub(id));
     Object.keys(state.subUnsubs).forEach((id) => {
       if (!activeIds.has(id)) unsubscribeKarigarSub(id);
     });
   }
 
-  function stopAll() {
-    Object.keys(state.subUnsubs).forEach(unsubscribeKarigarSub);
-  }
 
   function render() {
     const list = document.getElementById("karigarList");
@@ -129,7 +126,6 @@
 
   async function handleFormSubmit(e) {
     e.preventDefault();
-    const uid = KM.state.user.uid;
     const id = document.getElementById("karigarFormId").value;
     const data = {
       name: document.getElementById("karigarName").value.trim(),
@@ -139,8 +135,8 @@
     if (!data.name) return;
     try {
       KM.utils.showLoading(true);
-      if (id) await KM.db.updateKarigar(uid, id, data);
-      else await KM.db.addKarigar(uid, data);
+      if (id) await KM.db.updateKarigar(id, data);
+      else await KM.db.addKarigar(data);
       document.getElementById("karigarFormModal").classList.add("hidden");
       toast(id ? "Karigar update ho gaya" : "Karigar add ho gaya");
     } catch (err) {
@@ -156,7 +152,7 @@
     if (!confirm("Is karigar ko poori history ke saath delete karein?")) return;
     try {
       KM.utils.showLoading(true);
-      await KM.db.deleteKarigar(KM.state.user.uid, id);
+      await KM.db.deleteKarigar(id);
       document.getElementById("karigarFormModal").classList.add("hidden");
       document.getElementById("karigarDetailModal").classList.add("hidden");
       toast("Karigar delete ho gaya");
@@ -230,7 +226,7 @@
     const btn = e.target.closest(".row-delete");
     if (!btn) return;
     if (!confirm("Yeh entry delete karein?")) return;
-    await KM.db.deleteSubEntry(KM.state.user.uid, KM.state.currentKarigarId, btn.dataset.sub, btn.dataset.entry);
+    await KM.db.deleteSubEntry(KM.state.currentKarigarId, btn.dataset.sub, btn.dataset.entry);
   }
 
   function whatsAppShare() {
@@ -272,7 +268,7 @@
       advance: document.getElementById("workAdvance").value,
       note: document.getElementById("workNote").value,
     };
-    await KM.db.addWorkLog(KM.state.user.uid, KM.state.currentKarigarId, data);
+    await KM.db.addWorkLog(KM.state.currentKarigarId, data);
     e.target.reset();
     document.getElementById("workDate").value = todayStr();
     document.getElementById("workAdvance").value = 0;
@@ -286,7 +282,7 @@
       rate: document.getElementById("sampleRate").value,
       note: document.getElementById("sampleNote").value,
     };
-    await KM.db.addSampleWork(KM.state.user.uid, KM.state.currentKarigarId, data);
+    await KM.db.addSampleWork(KM.state.currentKarigarId, data);
     e.target.reset();
     document.getElementById("sampleDate").value = todayStr();
   }
@@ -298,7 +294,7 @@
       amount: document.getElementById("paymentAmount").value,
       note: document.getElementById("paymentNote").value,
     };
-    await KM.db.addPayment(KM.state.user.uid, KM.state.currentKarigarId, data);
+    await KM.db.addPayment(KM.state.currentKarigarId, data);
     e.target.reset();
     document.getElementById("paymentDate").value = todayStr();
   }
@@ -342,5 +338,5 @@
     document.getElementById("karigarDetailModal").addEventListener("click", handleRowDelete);
   }
 
-  KM.karigar = { init, render, syncSubscriptions, stopAll, computeTotals, getTotals: (id) => state.totals[id] };
+  KM.karigar = { init, render, syncSubscriptions, computeTotals, getTotals: (id) => state.totals[id] };
 })();

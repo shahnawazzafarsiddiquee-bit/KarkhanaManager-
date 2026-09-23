@@ -45,20 +45,5 @@
     if (el) el.classList.toggle("hidden", !show);
   }
 
-  function friendlyAuthError(err) {
-    const map = {
-      "auth/email-already-in-use": "Yeh email pehle se registered hai. Sign In karein.",
-      "auth/invalid-email": "Email sahi format mein nahi hai.",
-      "auth/weak-password": "Password kam se kam 6 characters ka hona chahiye.",
-      "auth/user-not-found": "Is email se koi account nahi mila.",
-      "auth/wrong-password": "Password galat hai.",
-      "auth/invalid-credential": "Email ya password galat hai.",
-      "auth/too-many-requests": "Bahut zyada attempts ho gaye, thodi der baad try karein.",
-      "auth/operation-not-allowed": "Firebase console mein Email/Password sign-in enable nahi hai.",
-      "auth/network-request-failed": "Internet connection check karein.",
-    };
-    return map[err && err.code] || (err && err.message) || "Kuch galat ho gaya, dobara try karein.";
-  }
-
-  KM.utils = { escapeHtml, formatCurrency, formatDate, todayStr, toast, showLoading, friendlyAuthError };
+  KM.utils = { escapeHtml, formatCurrency, formatDate, todayStr, toast, showLoading };
 })();

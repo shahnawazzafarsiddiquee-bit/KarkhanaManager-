@@ -5,7 +5,7 @@
   async function exportJson() {
     try {
       KM.utils.showLoading(true);
-      const payload = await KM.db.exportAll(KM.state.user.uid);
+      const payload = await KM.db.exportAll();
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -32,7 +32,7 @@
         const payload = JSON.parse(reader.result);
         if (!confirm(`${(payload.karigars || []).length} karigars aur ${(payload.vyaparis || []).length} vyaparis import karein? (existing data delete nahi hoga, naya add ho jaayega)`)) return;
         KM.utils.showLoading(true);
-        const result = await KM.db.importAll(KM.state.user.uid, payload);
+        const result = await KM.db.importAll(payload);
         document.getElementById("backupStatus").textContent = `Import ho gaya: ${result.karigarCount} karigars, ${result.vyapariCount} vyaparis add hue.`;
         toast("Import successful");
       } catch (err) {

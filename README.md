@@ -1,41 +1,40 @@
 # Karakhana Manager
 
-Garment factory ledger web app. Har factory owner apne email se sign up karke,
-apne business ke naam se **Karigar** (worker) aur **Vyapari** (trader) ka poora
-hisaab rakh sakta hai. Data Firebase (Firestore) mein private rehta hai — sirf
-aapka account hi apna data dekh sakta hai.
+Garment factory ledger web app. Pehli baar kholne pe sirf **Business Name**
+aur **Aapka Naam** poochta hai — koi login ya password nahi. Uske baad
+**Karigar** (worker) aur **Vyapari** (trader) ka poora hisaab rakhiye.
 
-No build step, no framework — plain HTML/CSS/JS, Firebase compat SDK + jsPDF,
-sab CDN se load hota hai. Kisi bhi static host (GitHub Pages, Netlify, Firebase
-Hosting) pe seedha deploy ho jaata hai.
+**Data sirf isi phone/browser mein save hota hai** (localStorage). Kisi server
+pe copy nahi jaati, isliye **Backup** tab se JSON file download karke rakhte
+rahiye — phone badalne ya app hatne pe wahi file Import karke sab wapas aata hai.
+
+No build step, no framework, no backend — plain HTML/CSS/JS + jsPDF from a
+CDN. Kisi bhi static host (GitHub Pages, Netlify) pe seedha deploy ho jaata hai.
 
 ## Files
 
 ```
-index.html              Auth screens + app shell + all modals
+index.html              Setup screen + app shell + all modals
 css/style.css            Theme (dark/light) + responsive layout
-js/firebase-config.js    Firebase init (PASTE YOUR CONFIG HERE)
 js/utils.js              Shared helpers (currency, date, toast, escaping)
-js/db.js                 Firestore CRUD, scoped to businesses/{uid}
-js/theme.js               Dark/light toggle (localStorage)
+js/store.js              On-device data store (localStorage) + shared state
+js/profile.js            Business name / owner name setup and editing
+js/theme.js               Dark/light toggle
 js/pdf.js                 jsPDF: karigar statement + vyapari challan
 js/karigar.js              Karigar module (list, ledger, calculations, WhatsApp, PDF)
 js/vyapari.js               Vyapari module (list, statuses, filters, PDF challan)
 js/dashboard.js              Dashboard stat cards
 js/backup.js                  JSON export/import
-js/auth.js                     Sign up / sign in / logout / forgot password
-js/app.js                       Bootstraps everything, routing, auth-state wiring
+js/app.js                       Bootstraps everything and routing
 manifest.json                   PWA manifest
 sw.js                             Minimal service worker (offline app shell cache)
 icons/icon.svg, icon-192.png, icon-512.png   App icons (placeholders - swap with your logo)
-firestore.rules                   Sample Firestore security rules
 ```
 
 ## Features
 
-**Auth (Email/Password only, no phone/OTP)**
-- Sign Up: Business Name, Owner Name, Email, Password
-- Sign In, Logout, Forgot Password (email reset link)
+**Setup**
+- First launch asks only Business Name and your name; ✏️ in the header edits them
 - Business name shown in header, PDFs, WhatsApp messages
 
 **Karigar module**
@@ -65,60 +64,16 @@ firestore.rules                   Sample Firestore security rules
 
 ---
 
-## 1. Create a Firebase project
-
-1. Go to <https://console.firebase.google.com> → **Add project** → give it a
-   name (e.g. `karakhana-manager`) → finish the wizard.
-2. In the project, click the **web icon (`</>`)** under "Get started by adding
-   Firebase to your app" → register an app (any nickname) → Firebase will show
-   you a `firebaseConfig` object. Keep that tab open.
-
-## 2. Enable Email/Password auth
-
-Firebase console → **Build → Authentication → Get started → Sign-in method**
-→ enable **Email/Password** → Save.
-
-## 3. Create Firestore
-
-Firebase console → **Build → Firestore Database → Create database** → start
-in **production mode** → pick a region close to your users → Enable.
-
-Then open the **Rules** tab and replace the default rules with the contents
-of [`firestore.rules`](./firestore.rules) from this project, then **Publish**.
-
-## 4. Paste your firebaseConfig
-
-Open `js/firebase-config.js` and replace every `"REPLACE_ME_..."` value with
-the real values from step 1:
-
-```js
-const firebaseConfig = {
-  apiKey: "AIza...",
-  authDomain: "karakhana-manager.firebaseapp.com",
-  projectId: "karakhana-manager",
-  storageBucket: "karakhana-manager.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456",
-};
-```
-
-Save the file. That's the only code change needed to go live.
-
-## 5. Deploy to GitHub Pages
+## 1. Deploy to GitHub Pages
 
 1. Push this folder's contents to a GitHub repository (root of the repo, or a
    `docs/` folder — either works).
 2. Repo → **Settings → Pages** → Source: **Deploy from a branch** → pick your
    branch and the folder that contains `index.html` → Save.
 3. GitHub gives you a URL like `https://<username>.github.io/<repo>/`. Open it
-   — you should see the Sign In / Sign Up screen.
+   — you should see the Business Name / Aapka Naam screen.
 
-> Firebase Auth needs your Pages domain to be authorized: Firebase console →
-> Authentication → Settings → **Authorized domains** → add
-> `<username>.github.io` (it's usually added automatically, but check if
-> sign-in fails with a domain error).
-
-## 6. Build the Android APK and AAB
+## 2. Build the Android APK and AAB
 
 `.github/workflows/build-android.yml` wraps the deployed site as a Trusted
 Web Activity with [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap)
@@ -166,7 +121,7 @@ keytool -list -v -keystore upload-keystore.jks -alias upload | grep SHA256
 > generated inside the run. That is only for checking the build works — the
 > artifacts are not published and cannot be updated later.
 
-## 7. Publish the AAB to Google Play
+## 3. Publish the AAB to Google Play
 
 1. Create a Google Play Console account (one-time $25 registration) at
    <https://play.google.com/console>.
@@ -187,11 +142,10 @@ Console requires your own developer account and human review.
 
 ---
 
-## Test checklist: Sign Up → Karigar → Vyapari → PDF
+## Test checklist: Setup → Karigar → Vyapari → PDF
 
-1. Open the deployed URL → **Sign Up** tab → fill Business Name, Owner Name,
-   Email, Password → Submit. You land on the Dashboard, header shows your
-   business name.
+1. Open the deployed URL → fill Business Name and Aapka Naam → **Shuru
+   Karein**. You land on the Dashboard, header shows your business name.
 2. **Karigar tab → + Naya Karigar** → enter a name → Save. Click the karigar
    card to open their ledger.
 3. In **Daily Work** tab, add a row (date, pieces, rate, advance) → it appears
@@ -206,8 +160,8 @@ Console requires your own developer account and human review.
 7. Reopen that vyapari card → **📄 PDF Challan** → downloads a PDF with
    letterhead, lot details, and green "DONE"/red "PENDING" status stamps.
 8. **Backup tab → Export JSON** → downloads your full business data as a
-   `.json` file. Try **Import JSON** with that same file on another account to
-   confirm restore works.
+   `.json` file. Open the app in another browser or phone and **Import JSON**
+   that file to confirm restore works.
 9. Toggle the 🌙/☀️ button in the header to confirm dark/light theme, and
    resize the browser (or open on a phone) to confirm the layout stays usable.
 
@@ -216,10 +170,10 @@ Console requires your own developer account and human review.
 - **WhatsApp share** opens `wa.me` with the message pre-filled; actually
   sending still requires the user to tap Send inside WhatsApp (this is a
   WhatsApp platform restriction, not something a web app can bypass).
-- **Offline mode**: the service worker caches the app shell (HTML/CSS/JS) for
-  offline loading, but live data always comes from Firestore — without
-  internet you can view the last-loaded data via Firestore's own local cache,
-  but new writes sync once you're back online.
+- **Data lives on one device.** Nothing is sent to a server, so the app
+  works fully offline, but clearing the browser's site data, uninstalling the
+  app or losing the phone loses the data. The Backup tab's JSON export is the
+  only copy that can survive that - take one regularly.
 - Deleting a karigar also deletes their work log / sample work / payment
   history — this is intentional (Delete is a destructive action with a
   confirm prompt).

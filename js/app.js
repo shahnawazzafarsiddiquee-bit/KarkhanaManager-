@@ -33,22 +33,15 @@
     });
   }
 
-  function stopDataListeners() {
-    KM.state.unsubscribers.forEach((fn) => fn && fn());
-    KM.state.unsubscribers = [];
-    KM.karigar.stopAll();
-    KM.state.karigars = [];
-    KM.state.vyaparis = [];
-  }
-
-  function startDataListeners(uid) {
-    const unsubKarigars = KM.db.listenKarigars(uid, (rows) => {
+  function startDataListeners() {
+    if (KM.state.unsubscribers.length) return;
+    const unsubKarigars = KM.db.listenKarigars((rows) => {
       KM.state.karigars = rows;
-      KM.karigar.syncSubscriptions(uid);
+      KM.karigar.syncSubscriptions();
       KM.karigar.render();
       KM.dashboard.render();
     });
-    const unsubVyaparis = KM.db.listenVyaparis(uid, (rows) => {
+    const unsubVyaparis = KM.db.listenVyaparis((rows) => {
       KM.state.vyaparis = rows;
       KM.vyapari.render();
       KM.dashboard.render();
@@ -56,27 +49,12 @@
     KM.state.unsubscribers.push(unsubKarigars, unsubVyaparis);
   }
 
-  async function onLogin(user) {
-    KM.state.user = user;
-    const business = await KM.db.getBusiness(user.uid);
-    KM.state.business = business;
-    document.getElementById("businessNameLabel").textContent = business ? business.businessName : "Karakhana Manager";
-    document.getElementById("ownerNameLabel").textContent = business && business.ownerName ? business.ownerName : "";
-    document.getElementById("authScreen").classList.add("hidden");
+  function showApp() {
+    const b = KM.state.business;
+    document.getElementById("businessNameLabel").textContent = b.businessName;
+    document.getElementById("ownerNameLabel").textContent = b.ownerName || "";
     document.getElementById("mainApp").classList.remove("hidden");
-    switchView("dashboard");
-    startDataListeners(user.uid);
-  }
-
-  function onLogout() {
-    stopDataListeners();
-    KM.state.user = null;
-    KM.state.business = null;
-    document.getElementById("mainApp").classList.add("hidden");
-    document.getElementById("authScreen").classList.remove("hidden");
-    document.querySelectorAll(".modal").forEach((m) => m.classList.add("hidden"));
-    document.getElementById("signInForm").reset();
-    document.getElementById("signUpForm").reset();
+    startDataListeners();
   }
 
   function registerServiceWorker() {
@@ -87,21 +65,19 @@
     }
   }
 
-  function init() {
+  async function init() {
     KM.theme.init();
     wireNav();
     wireModals();
-    KM.auth.init();
+    KM.profile.init(showApp);
     KM.karigar.init();
     KM.vyapari.init();
     KM.backup.init();
     registerServiceWorker();
 
-    KM.fbAuth.onAuthStateChanged((user) => {
-      KM.utils.showLoading(false);
-      if (user) onLogin(user);
-      else onLogout();
-    });
+    KM.state.business = await KM.db.getBusiness();
+    if (KM.state.business) showApp();
+    else KM.profile.open(false);
   }
 
   document.addEventListener("DOMContentLoaded", init);

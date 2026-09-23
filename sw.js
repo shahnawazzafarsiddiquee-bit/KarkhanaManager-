@@ -1,18 +1,17 @@
-const CACHE_NAME = "karakhana-v2";
+const CACHE_NAME = "karakhana-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./css/style.css",
-  "./js/firebase-config.js",
   "./js/utils.js",
-  "./js/db.js",
+  "./js/store.js",
   "./js/theme.js",
   "./js/pdf.js",
   "./js/karigar.js",
   "./js/vyapari.js",
   "./js/dashboard.js",
   "./js/backup.js",
-  "./js/auth.js",
+  "./js/profile.js",
   "./js/app.js",
   "./manifest.json",
   "./icons/icon.svg",
@@ -34,8 +33,8 @@ self.addEventListener("activate", (event) => {
 
 // Network-first for our own static files, so a redeploy reaches the browser on
 // the next load; the cache is the offline fallback. Cache-first would pin an
-// old build - including firebase-config.js - until the cache name changed.
-// Firebase/Auth/Firestore/CDN requests are left untouched.
+// old build until the cache name changed.
+// Cross-origin (CDN) requests are left untouched.
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin || event.request.method !== "GET") {

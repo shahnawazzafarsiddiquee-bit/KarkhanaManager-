@@ -14,8 +14,8 @@
 <body>
 <div id="app">
 
-  <!-- ================= AUTH SCREEN ================= -->
-  <section id="authScreen" class="auth-screen">
+  <!-- ================= SETUP SCREEN ================= -->
+  <section id="setupScreen" class="auth-screen hidden">
     <div class="auth-card">
       <div class="auth-brand">
         <span class="auth-logo">🧵</span>
@@ -23,42 +23,15 @@
         <p class="auth-sub">Karigar aur Vyapari ka poora hisaab, ek jagah</p>
       </div>
 
-      <div class="auth-tabs">
-        <button type="button" id="tabSignIn" class="auth-tab active">Sign In</button>
-        <button type="button" id="tabSignUp" class="auth-tab">Sign Up</button>
-      </div>
-
-      <p id="authError" class="auth-error hidden"></p>
-      <p id="authInfo" class="auth-info hidden"></p>
-
-      <form id="signInForm" class="auth-form">
-        <label>Email
-          <input type="email" id="signInEmail" required autocomplete="username" />
-        </label>
-        <label>Password
-          <input type="password" id="signInPassword" required autocomplete="current-password" minlength="6" />
-        </label>
-        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
-        <button type="button" id="forgotPasswordBtn" class="btn-link">Password bhool gaye?</button>
-      </form>
-
-      <form id="signUpForm" class="auth-form hidden">
+      <form id="setupForm" class="auth-form">
         <label>Business Name
-          <input type="text" id="signUpBusinessName" required placeholder="e.g. Saddam Garments" />
+          <input type="text" id="setupBusinessName" required placeholder="e.g. Brothers Creation" />
         </label>
-        <label>Owner Name
-          <input type="text" id="signUpOwnerName" required placeholder="e.g. Saddam Khan" />
+        <label>Aapka Naam
+          <input type="text" id="setupOwnerName" required placeholder="e.g. Saddam Khan" />
         </label>
-        <label>Email
-          <input type="email" id="signUpEmail" required autocomplete="username" />
-        </label>
-        <label>Password
-          <input type="password" id="signUpPassword" required autocomplete="new-password" minlength="6" />
-        </label>
-        <label>Confirm Password
-          <input type="password" id="signUpConfirmPassword" required autocomplete="new-password" minlength="6" />
-        </label>
-        <button type="submit" class="btn btn-primary btn-block">Sign Up</button>
+        <button type="submit" class="btn btn-primary btn-block" id="setupSubmitBtn">Shuru Karein</button>
+        <button type="button" class="btn-link hidden" id="setupCancelBtn">Cancel</button>
       </form>
     </div>
   </section>
@@ -81,7 +54,7 @@
       </nav>
       <div class="topbar-actions">
         <button type="button" id="themeToggleBtn" class="icon-btn" title="Theme badlein">🌙</button>
-        <button type="button" id="logoutBtn" class="btn btn-ghost">Logout</button>
+        <button type="button" id="editProfileBtn" class="icon-btn" title="Naam badlein">✏️</button>
       </div>
     </header>
 
@@ -153,7 +126,7 @@
       <!-- Backup -->
       <section id="backupView" class="view hidden">
         <h2>Backup</h2>
-        <p class="muted">Apne poore business data ka JSON backup download karein, ya kisi purane backup se restore karein.</p>
+        <p class="muted">Aapka saara data sirf isi phone mein save hota hai. Phone kho jaye, app hat jaye ya browser data saaf ho jaye toh data chala jayega — isliye yahan se backup file download karke WhatsApp/Google Drive pe rakhte rahiye. Naye phone pe usi file ko Import karke sab wapas aa jayega.</p>
         <div class="backup-actions">
           <button type="button" class="btn btn-primary" id="exportJsonBtn">⬇️ Export JSON</button>
           <label class="btn btn-ghost file-btn">
@@ -337,25 +310,19 @@
   <div id="loadingOverlay" class="loading-overlay hidden"><div class="spinner"></div></div>
 </div>
 
-<!-- Firebase (compat SDK, no build step needed) -->
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-
 <!-- jsPDF for PDF generation -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
-<script src="js/firebase-config.js"></script>
 <script src="js/utils.js"></script>
-<script src="js/db.js"></script>
+<script src="js/store.js"></script>
 <script src="js/theme.js"></script>
 <script src="js/pdf.js"></script>
 <script src="js/karigar.js"></script>
 <script src="js/vyapari.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/backup.js"></script>
-<script src="js/auth.js"></script>
+<script src="js/profile.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

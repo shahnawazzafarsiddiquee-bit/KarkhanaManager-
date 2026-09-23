@@ -111,14 +111,13 @@
 
   async function handleFormSubmit(e) {
     e.preventDefault();
-    const uid = KM.state.user.uid;
     const id = document.getElementById("vyapariFormId").value;
     const data = collectForm();
     if (!data.trader) return;
     try {
       KM.utils.showLoading(true);
-      if (id) await KM.db.updateVyapari(uid, id, data);
-      else await KM.db.addVyapari(uid, data);
+      if (id) await KM.db.updateVyapari(id, data);
+      else await KM.db.addVyapari(data);
       document.getElementById("vyapariFormModal").classList.add("hidden");
       toast(id ? "Vyapari update ho gaya" : "Vyapari add ho gaya");
     } catch (err) {
@@ -134,7 +133,7 @@
     if (!confirm("Yeh vyapari record delete karein?")) return;
     try {
       KM.utils.showLoading(true);
-      await KM.db.deleteVyapari(KM.state.user.uid, id);
+      await KM.db.deleteVyapari(id);
       document.getElementById("vyapariFormModal").classList.add("hidden");
       toast("Vyapari delete ho gaya");
     } catch (err) {
