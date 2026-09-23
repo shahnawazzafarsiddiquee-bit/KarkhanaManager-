@@ -23,10 +23,21 @@
     return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   }
 
-  function todayStr() {
-    const d = new Date();
+  // Local-time YYYY-MM-DD, the format <input type="date"> reads and writes.
+  function dateStr(d) {
     const pad = (n) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  function todayStr() {
+    return dateStr(new Date());
+  }
+
+  // What a vyapari owes for a lot: pieces x per-piece rate, less what they paid.
+  function vyapariMoney(v) {
+    const total = (Number(v.lotPcs) || 0) * (Number(v.ratePerPc) || 0);
+    const received = (v.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    return { total, received, balance: total - received };
   }
 
   let toastTimer = null;
@@ -45,5 +56,5 @@
     if (el) el.classList.toggle("hidden", !show);
   }
 
-  KM.utils = { escapeHtml, formatCurrency, formatDate, todayStr, toast, showLoading };
+  KM.utils = { escapeHtml, formatCurrency, formatDate, dateStr, todayStr, vyapariMoney, toast, showLoading };
 })();

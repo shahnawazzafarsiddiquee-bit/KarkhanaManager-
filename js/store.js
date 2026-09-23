@@ -17,15 +17,60 @@
     unsubscribers: [],
   };
 
+  const newId = () =>
+    window.crypto && crypto.randomUUID
+      ? crypto.randomUUID()
+      : Date.now().toString(36) + Math.random().toString(36).slice(2);
+  const now = () => new Date().toISOString();
+  const copy = (x) => JSON.parse(JSON.stringify(x));
+  const byDateDesc = (a, b) => (b.date || "").localeCompare(a.date || "");
+
   const KEY = "km-data-v1";
   const SUBS = ["workLogs", "sampleWork", "payments"];
-  const emptyData = () => ({ business: null, karigars: [], vyaparis: [] });
+  const emptyData = () => ({ business: null, karigars: [], vyaparis: [], expenses: [], lastBackupAt: null });
+
+  // Vyapari money used to be a single "payment received" tick. It is now a
+  // list of payments; a record ticked as paid becomes one payment of the
+  // full lot value so its balance still reads zero.
+  function migrateVyapari(v) {
+    if (!Array.isArray(v.payments)) {
+      v.payments = [];
+      const total = (Number(v.lotPcs) || 0) * (Number(v.ratePerPc) || 0);
+      if (v.paymentReceived && total > 0) {
+        v.payments.push({
+          id: newId(),
+          date: v.paymentReceivedDate || (v.createdAt || now()).slice(0, 10),
+          amount: total,
+          note: v.paymentReceivedNote || "",
+          createdAt: now(),
+        });
+      }
+    }
+    delete v.paymentReceived;
+    delete v.paymentReceivedDate;
+    delete v.paymentReceivedNote;
+    return v;
+  }
+
+  function normalize(d) {
+    const out = { ...emptyData(), ...d };
+    out.karigars = out.karigars || [];
+    out.expenses = out.expenses || [];
+    out.vyaparis = (out.vyaparis || []).map(migrateVyapari);
+    return out;
+  }
 
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      return raw ? JSON.parse(raw) : emptyData();
+      return raw ? normalize(JSON.parse(raw)) : emptyData();
     } catch (e) {
+      // The next save would overwrite whatever could not be read, so park a
+      // copy of it first rather than lose the ledger silently.
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (raw) localStorage.setItem(`${KEY}-unreadable-${Date.now()}`, raw);
+      } catch (_) {}
       return emptyData();
     }
   }
@@ -51,13 +96,6 @@
     return () => listeners.delete(run);
   }
 
-  const newId = () =>
-    window.crypto && crypto.randomUUID
-      ? crypto.randomUUID()
-      : Date.now().toString(36) + Math.random().toString(36).slice(2);
-  const now = () => new Date().toISOString();
-  const copy = (x) => JSON.parse(JSON.stringify(x));
-  const byDateDesc = (a, b) => (b.date || "").localeCompare(a.date || "");
   const findKarigar = (id) => data.karigars.find((k) => k.id === id);
 
   function karigarSummary(k) {
@@ -88,6 +126,11 @@
   const makePayment = (d) => ({
     id: newId(), date: d.date, amount: Number(d.amount) || 0, note: d.note || "", createdAt: now(),
   });
+  const makeExpense = (d) => ({
+    id: newId(), date: d.date, category: d.category || "Other", amount: Number(d.amount) || 0,
+    note: d.note || "", createdAt: now(),
+  });
+  const findVyapari = (id) => data.vyaparis.find((v) => v.id === id);
 
   function addToKarigar(karigarId, sub, entry) {
     const k = findKarigar(karigarId);
@@ -163,16 +206,18 @@
     },
 
     async addVyapari(d) {
-      const v = { ...d, id: newId(), createdAt: now() };
+      const v = { ...d, id: newId(), createdAt: now(), payments: [] };
       data.vyaparis.push(v);
       commit();
       return v.id;
     },
 
+    // Payments are managed separately, so an edit never touches them.
     async updateVyapari(id, d) {
-      const v = data.vyaparis.find((x) => x.id === id);
+      const v = findVyapari(id);
       if (!v) return;
-      Object.assign(v, d);
+      const { payments, id: _id, createdAt, ...fields } = d;
+      Object.assign(v, fields);
       commit();
     },
 
@@ -181,16 +226,52 @@
       commit();
     },
 
+    async addVyapariPayment(vyapariId, d) {
+      const v = findVyapari(vyapariId);
+      if (!v) throw new Error("Vyapari nahi mila.");
+      v.payments.push(makePayment(d));
+      commit();
+    },
+
+    async deleteVyapariPayment(vyapariId, entryId) {
+      const v = findVyapari(vyapariId);
+      if (!v) return;
+      v.payments = v.payments.filter((p) => p.id !== entryId);
+      commit();
+    },
+
+    // ---- expenses ----
+    async addExpense(d) {
+      data.expenses.push(makeExpense(d));
+      commit();
+    },
+
+    async deleteExpense(id) {
+      data.expenses = data.expenses.filter((e) => e.id !== id);
+      commit();
+    },
+
+    // Whole-ledger view for reports that span karigars, vyaparis and expenses.
+    listenAll(callback) {
+      return listen(() => copy(data), callback);
+    },
+
     // ---- backup ----
     async exportAll() {
       return { ...copy(data), exportedAt: now() };
     },
 
+    async markBackedUp() {
+      data.lastBackupAt = now();
+      commit();
+    },
+
     // Adds imported records alongside existing ones; nothing is overwritten.
     async importAll(payload) {
+      payload = normalize(payload);
       let karigarCount = 0;
       let vyapariCount = 0;
-      for (const src of payload.karigars || []) {
+      for (const src of payload.karigars) {
         const k = makeKarigar(src);
         k.workLogs = (src.workLogs || []).map(makeWorkLog);
         k.sampleWork = (src.sampleWork || []).map(makeSample);
@@ -198,11 +279,12 @@
         data.karigars.push(k);
         karigarCount++;
       }
-      for (const src of payload.vyaparis || []) {
-        const { id, createdAt, ...rest } = src;
-        data.vyaparis.push({ ...rest, id: newId(), createdAt: createdAt || now() });
+      for (const src of payload.vyaparis) {
+        const { id, createdAt, payments, ...rest } = src;
+        data.vyaparis.push({ ...rest, id: newId(), createdAt: createdAt || now(), payments: payments.map(makePayment) });
         vyapariCount++;
       }
+      data.expenses.push(...payload.expenses.map(makeExpense));
       if (!data.business && payload.business && payload.business.businessName) {
         data.business = {
           businessName: payload.business.businessName,

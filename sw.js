@@ -1,4 +1,4 @@
-const CACHE_NAME = "karakhana-v3";
+const CACHE_NAME = "karakhana-v4";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -10,6 +10,8 @@ const APP_SHELL = [
   "./js/karigar.js",
   "./js/vyapari.js",
   "./js/dashboard.js",
+  "./js/kharcha.js",
+  "./js/report.js",
   "./js/backup.js",
   "./js/profile.js",
   "./js/app.js",

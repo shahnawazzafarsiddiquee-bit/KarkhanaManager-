@@ -1,13 +1,28 @@
 (function () {
   const KM = window.KM || (window.KM = {});
-  const { escapeHtml, formatCurrency, formatDate, todayStr, toast } = KM.utils;
+  const { escapeHtml, formatCurrency, formatDate, todayStr, toast, vyapariMoney } = KM.utils;
 
-  const state = { search: "", filter: "all" };
+  const state = { search: "", filter: "all", currentId: null };
 
   function isOverdue(v) {
     if (!v.dueDate) return false;
     if (v.deliveryStatus === "delivered") return false;
     return v.dueDate < todayStr();
+  }
+
+  function lotLine(v) {
+    const pcs = Number(v.lotPcs) || 0;
+    const rate = Number(v.ratePerPc) || 0;
+    if (!pcs || !rate) return "";
+    return `${pcs} pcs × ${formatCurrency(rate)} = ${formatCurrency(pcs * rate)}`;
+  }
+
+  function moneyBadge(v) {
+    const m = vyapariMoney(v);
+    if (m.total <= 0) return "";
+    return m.balance > 0
+      ? `<span class="badge badge-unpaid">Baaki ${formatCurrency(m.balance)}</span>`
+      : `<span class="badge badge-paid">Paisa poora</span>`;
   }
 
   function render() {
@@ -21,48 +36,81 @@
       }
       if (state.filter === "pending" && v.deliveryStatus === "delivered") return false;
       if (state.filter === "overdue" && !isOverdue(v)) return false;
+      if (state.filter === "balance" && vyapariMoney(v).balance <= 0) return false;
       return true;
     });
 
     if (!items.length) {
       list.innerHTML = `<div class="empty-state">Koi vyapari record nahi mila. "+ Naya Vyapari" se add karein.</div>`;
-      return;
+    } else {
+      list.innerHTML = items
+        .map((v) => {
+          const deliveryBadge = v.deliveryStatus === "delivered"
+            ? `<span class="badge badge-delivered">Delivered</span>`
+            : `<span class="badge badge-pending">Pending</span>`;
+          const overdueBadge = isOverdue(v) ? `<span class="badge badge-overdue">Overdue</span>` : "";
+          const rate = Number(v.ratePerPc) ? `${v.lotPcs || 0} pcs × ${formatCurrency(v.ratePerPc)}/pc` : "";
+          const sub = [rate, v.design && escapeHtml(v.design), v.dueDate && `Due ${formatDate(v.dueDate)}`]
+            .filter(Boolean).join(" · ");
+          return `
+          <div class="entity-card" data-id="${v.id}">
+            <div>
+              <div class="entity-title">${escapeHtml(v.trader || "-")}</div>
+              <div class="entity-sub">${sub}</div>
+            </div>
+            <div class="card-badges">
+              ${moneyBadge(v)}${deliveryBadge}${overdueBadge}
+            </div>
+          </div>`;
+        })
+        .join("");
+
+      list.querySelectorAll(".entity-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          const v = KM.state.vyaparis.find((x) => x.id === card.dataset.id);
+          openForm(v);
+        });
+      });
     }
 
-    list.innerHTML = items
-      .map((v) => {
-        const overdue = isOverdue(v);
-        const deliveryBadge = v.deliveryStatus === "delivered"
-          ? `<span class="badge badge-delivered">Delivered</span>`
-          : `<span class="badge badge-pending">Pending</span>`;
-        const overdueBadge = overdue ? `<span class="badge badge-overdue">Overdue</span>` : "";
-        return `
-        <div class="entity-card" data-id="${v.id}">
-          <div>
-            <div class="entity-title">${escapeHtml(v.trader || "-")}</div>
-            <div class="entity-sub">${escapeHtml(v.fabric || "")}${v.design ? " · " + escapeHtml(v.design) : ""} · Due ${formatDate(v.dueDate)}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span>${formatCurrency((v.lotPcs || 0) * (v.ratePerPc || 0))}</span>
-            ${deliveryBadge}${overdueBadge}
-          </div>
-        </div>`;
-      })
-      .join("");
+    // Keep an open record's payment list in step with saves and deletes.
+    const modalOpen = !document.getElementById("vyapariFormModal").classList.contains("hidden");
+    if (modalOpen && state.currentId) {
+      const v = KM.state.vyaparis.find((x) => x.id === state.currentId);
+      if (v) renderPayments(v);
+    }
+  }
 
-    list.querySelectorAll(".entity-card").forEach((card) => {
-      card.addEventListener("click", () => {
-        const v = KM.state.vyaparis.find((x) => x.id === card.dataset.id);
-        openForm(v);
-      });
+  function renderPayments(v) {
+    const m = vyapariMoney(v);
+    document.getElementById("vyapariMoneySummary").innerHTML = m.total > 0
+      ? `<div class="money-row"><span>Lot</span><b>${lotLine(v)}</b></div>
+         <div class="money-row"><span>Mila</span><b class="money-ok">${formatCurrency(m.received)}</b></div>
+         <div class="money-row"><span>Baaki</span><b class="${m.balance > 0 ? "money-due" : "money-ok"}">${formatCurrency(Math.max(m.balance, 0))}</b></div>`
+      : `<p class="muted">Neeche Lot Pieces aur ek piece ka rate bhariye, tab baaki raqam dikhegi.</p>`;
+
+    const rows = [...(v.payments || [])].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    document.querySelector("#vyapariPayTable tbody").innerHTML = rows.length
+      ? rows.map((p) => `<tr>
+          <td>${formatDate(p.date)}</td><td>${formatCurrency(p.amount)}</td><td>${escapeHtml(p.note)}</td>
+          <td><button class="row-delete" data-entry="${p.id}">✕</button></td>
+        </tr>`).join("")
+      : `<tr><td colspan="4" class="muted">Abhi koi payment nahi mila</td></tr>`;
+  }
+
+  function updateLotValue() {
+    document.getElementById("vyapariLotValue").textContent = lotLine({
+      lotPcs: document.getElementById("vyapariLotPcs").value,
+      ratePerPc: document.getElementById("vyapariRatePerPc").value,
     });
   }
 
   function openForm(v) {
+    state.currentId = v ? v.id : null;
     const form = document.getElementById("vyapariForm");
     form.reset();
     document.getElementById("vyapariFormId").value = v ? v.id : "";
-    document.getElementById("vyapariFormTitle").textContent = v ? "Vyapari Edit Karein" : "Naya Vyapari";
+    document.getElementById("vyapariFormTitle").textContent = v ? v.trader : "Naya Vyapari";
     document.getElementById("vyapariTrader").value = v ? v.trader || "" : "";
     document.getElementById("vyapariFabric").value = v ? v.fabric || "" : "";
     document.getElementById("vyapariLotPcs").value = v ? v.lotPcs || 0 : 0;
@@ -78,14 +126,19 @@
     document.getElementById("vyapariLotReceived").checked = v ? !!v.lotReceived : false;
     document.getElementById("vyapariLotReceivedDate").value = v ? v.lotReceivedDate || "" : "";
     document.getElementById("vyapariLotReceivedNote").value = v ? v.lotReceivedNote || "" : "";
-    document.getElementById("vyapariPaymentReceived").checked = v ? !!v.paymentReceived : false;
-    document.getElementById("vyapariPaymentReceivedDate").value = v ? v.paymentReceivedDate || "" : "";
-    document.getElementById("vyapariPaymentReceivedNote").value = v ? v.paymentReceivedNote || "" : "";
     document.getElementById("deleteVyapariBtn").classList.toggle("hidden", !v);
     document.getElementById("vyapariPdfBtn").classList.toggle("hidden", !v);
+    updateLotValue();
+
+    // Payments belong to a saved record, so the section appears on edit only.
+    document.getElementById("vyapariPaySection").classList.toggle("hidden", !v);
+    document.getElementById("vyapariPayForm").reset();
+    document.getElementById("vyapariPayDate").value = todayStr();
+    if (v) renderPayments(v);
+
     // Keep the optional section collapsed unless this record already uses it.
     const extras = ["fabric", "color", "sizes", "colorMeters", "totalMeters", "notes",
-      "lotReceivedDate", "lotReceivedNote", "paymentReceivedDate", "paymentReceivedNote"];
+      "lotReceivedDate", "lotReceivedNote"];
     document.querySelector("#vyapariForm .more-details").open = !!v && extras.some((f) => v[f]);
     document.getElementById("vyapariFormModal").classList.remove("hidden");
   }
@@ -107,9 +160,6 @@
       lotReceived: document.getElementById("vyapariLotReceived").checked,
       lotReceivedDate: document.getElementById("vyapariLotReceivedDate").value,
       lotReceivedNote: document.getElementById("vyapariLotReceivedNote").value.trim(),
-      paymentReceived: document.getElementById("vyapariPaymentReceived").checked,
-      paymentReceivedDate: document.getElementById("vyapariPaymentReceivedDate").value,
-      paymentReceivedNote: document.getElementById("vyapariPaymentReceivedNote").value.trim(),
     };
   }
 
@@ -119,50 +169,68 @@
     const data = collectForm();
     if (!data.trader) return;
     try {
-      KM.utils.showLoading(true);
       if (id) await KM.db.updateVyapari(id, data);
       else await KM.db.addVyapari(data);
       document.getElementById("vyapariFormModal").classList.add("hidden");
       toast(id ? "Vyapari update ho gaya" : "Vyapari add ho gaya");
     } catch (err) {
       toast(err.message || "Save nahi ho paya", true);
-    } finally {
-      KM.utils.showLoading(false);
     }
+  }
+
+  async function handlePaySubmit(e) {
+    e.preventDefault();
+    try {
+      await KM.db.addVyapariPayment(state.currentId, {
+        date: document.getElementById("vyapariPayDate").value,
+        amount: document.getElementById("vyapariPayAmount").value,
+        note: document.getElementById("vyapariPayNote").value,
+      });
+    } catch (err) {
+      toast(err.message || "Save nahi ho paya", true);
+      return;
+    }
+    e.target.reset();
+    document.getElementById("vyapariPayDate").value = todayStr();
+    toast("Payment add ho gaya");
+  }
+
+  async function handlePayDelete(e) {
+    const btn = e.target.closest(".row-delete");
+    if (!btn) return;
+    if (!confirm("Yeh payment delete karein?")) return;
+    await KM.db.deleteVyapariPayment(state.currentId, btn.dataset.entry);
   }
 
   async function handleDelete() {
     const id = document.getElementById("vyapariFormId").value;
     if (!id) return;
-    if (!confirm("Yeh vyapari record delete karein?")) return;
+    if (!confirm("Yeh vyapari record delete karein? Iske saare payment bhi mit jayenge.")) return;
     try {
-      KM.utils.showLoading(true);
       await KM.db.deleteVyapari(id);
       document.getElementById("vyapariFormModal").classList.add("hidden");
       toast("Vyapari delete ho gaya");
     } catch (err) {
       toast(err.message || "Delete nahi ho paya", true);
-    } finally {
-      KM.utils.showLoading(false);
     }
   }
 
   function downloadPdf() {
-    const id = document.getElementById("vyapariFormId").value;
-    const v = KM.state.vyaparis.find((x) => x.id === id) || collectForm();
-    KM.pdf.vyapariChallan(KM.state.business, v);
+    const v = KM.state.vyaparis.find((x) => x.id === state.currentId);
+    if (v) KM.pdf.vyapariChallan(KM.state.business, v);
   }
 
   function init() {
-    [["vyapariLotReceived", "vyapariLotReceivedDate"], ["vyapariPaymentReceived", "vyapariPaymentReceivedDate"]]
-      .forEach(([checkId, dateId]) => {
-        document.getElementById(checkId).addEventListener("change", (e) => {
-          const date = document.getElementById(dateId);
-          if (e.target.checked && !date.value) date.value = todayStr();
-        });
-      });
+    document.getElementById("vyapariLotReceived").addEventListener("change", (e) => {
+      const date = document.getElementById("vyapariLotReceivedDate");
+      if (e.target.checked && !date.value) date.value = todayStr();
+    });
+    document.getElementById("vyapariLotPcs").addEventListener("input", updateLotValue);
+    document.getElementById("vyapariRatePerPc").addEventListener("input", updateLotValue);
     document.getElementById("addVyapariBtn").addEventListener("click", () => openForm(null));
     document.getElementById("vyapariForm").addEventListener("submit", handleFormSubmit);
+    document.getElementById("vyapariPayForm").addEventListener("submit", handlePaySubmit);
+    document.getElementById("vyapariPayTable").addEventListener("click", handlePayDelete);
     document.getElementById("deleteVyapariBtn").addEventListener("click", handleDelete);
     document.getElementById("vyapariPdfBtn").addEventListener("click", downloadPdf);
 

@@ -39,14 +39,19 @@
       KM.state.karigars = rows;
       KM.karigar.syncSubscriptions();
       KM.karigar.render();
-      KM.dashboard.render();
     });
     const unsubVyaparis = KM.db.listenVyaparis((rows) => {
       KM.state.vyaparis = rows;
       KM.vyapari.render();
-      KM.dashboard.render();
     });
-    KM.state.unsubscribers.push(unsubKarigars, unsubVyaparis);
+    // Views that total across the whole ledger get it in one piece.
+    const unsubAll = KM.db.listenAll((data) => {
+      KM.dashboard.render(data);
+      KM.kharcha.render(data);
+      KM.report.update(data);
+      KM.backup.update(data);
+    });
+    KM.state.unsubscribers.push(unsubKarigars, unsubVyaparis, unsubAll);
   }
 
   function showApp() {
@@ -72,6 +77,9 @@
     KM.profile.init(showApp);
     KM.karigar.init();
     KM.vyapari.init();
+    KM.dashboard.init();
+    KM.kharcha.init();
+    KM.report.init();
     KM.backup.init();
     registerServiceWorker();
 

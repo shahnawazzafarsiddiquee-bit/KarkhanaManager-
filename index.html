@@ -47,9 +47,10 @@
         </div>
       </div>
       <nav class="tabs" id="mainNav">
-        <button type="button" data-view="dashboard" class="nav-btn active">Dashboard</button>
+        <button type="button" data-view="dashboard" class="nav-btn active">Home</button>
         <button type="button" data-view="karigar" class="nav-btn">Karigar</button>
         <button type="button" data-view="vyapari" class="nav-btn">Vyapari</button>
+        <button type="button" data-view="kharcha" class="nav-btn">Kharcha</button>
         <button type="button" data-view="backup" class="nav-btn">Backup</button>
       </nav>
       <div class="topbar-actions">
@@ -61,19 +62,36 @@
     <main id="views">
       <!-- Dashboard -->
       <section id="dashboardView" class="view active">
-        <h2>Dashboard</h2>
+        <div id="backupReminder" class="reminder hidden">
+          <span id="backupReminderText"></span>
+          <button type="button" class="btn btn-primary" id="reminderBackupBtn">Abhi backup lo</button>
+        </div>
+
+        <div class="month-card">
+          <div class="month-head">
+            <h2>Mahine ka hisaab</h2>
+            <input type="month" id="monthPicker" aria-label="Mahina chuniye" />
+          </div>
+          <div class="money-row"><span>Vyapari se aaya</span><b class="money-ok" id="mIncome">₹0</b></div>
+          <div class="money-row"><span>Karigar ko diya (payment + kharchi)</span><b id="mKarigarPaid">₹0</b></div>
+          <div class="money-row"><span>Kharcha</span><b id="mExpenses">₹0</b></div>
+          <div class="money-row money-total"><span>Munafa</span><b id="mProfit">₹0</b></div>
+          <div class="money-row"><span>Pieces bane</span><b id="mPieces">0</b></div>
+          <p class="muted small">Is mahine jo paisa sach mein aaya aur gaya. Jo abhi lena/dena baaki hai woh neeche hai.</p>
+        </div>
+
         <div class="stat-grid">
+          <div class="stat-card stat-card-warn">
+            <span class="stat-label">Karigar ko dena baaki</span>
+            <span class="stat-value" id="statKarigarPayable">₹0</span>
+          </div>
+          <div class="stat-card stat-card-ok">
+            <span class="stat-label">Vyapari se lena baaki</span>
+            <span class="stat-value" id="statVyapariBalance">₹0</span>
+          </div>
           <div class="stat-card">
             <span class="stat-label">Total Karigars</span>
             <span class="stat-value" id="statKarigarCount">0</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Total Pieces (is mahine)</span>
-            <span class="stat-value" id="statTotalPieces">0</span>
-          </div>
-          <div class="stat-card stat-card-warn">
-            <span class="stat-label">Karigar Payable</span>
-            <span class="stat-value" id="statKarigarPayable">₹0</span>
           </div>
           <div class="stat-card">
             <span class="stat-label">Total Vyaparis</span>
@@ -94,7 +112,10 @@
       <section id="karigarView" class="view hidden">
         <div class="view-header">
           <h2>Karigar</h2>
-          <button type="button" class="btn btn-primary" id="addKarigarBtn">+ Naya Karigar</button>
+          <div class="header-buttons">
+            <button type="button" class="btn btn-ghost" id="openReportBtn">📊 Hisaab</button>
+            <button type="button" class="btn btn-primary" id="addKarigarBtn">+ Naya Karigar</button>
+          </div>
         </div>
         <div class="toolbar">
           <input type="search" id="karigarSearch" placeholder="Naam se dhoondein..." />
@@ -118,20 +139,61 @@
             <button type="button" class="filter-btn active" data-filter="all">All</button>
             <button type="button" class="filter-btn" data-filter="pending">Pending</button>
             <button type="button" class="filter-btn" data-filter="overdue">Overdue</button>
+            <button type="button" class="filter-btn" data-filter="balance">Baaki</button>
           </div>
         </div>
         <div id="vyapariList" class="card-list"></div>
       </section>
 
+      <!-- Kharcha -->
+      <section id="kharchaView" class="view hidden">
+        <div class="view-header">
+          <h2>Kharcha</h2>
+          <input type="month" id="kharchaMonth" aria-label="Mahina chuniye" />
+        </div>
+        <form id="expenseForm" class="entry-form panel">
+          <label>Kis cheez ka
+            <select id="expenseCategory">
+              <option>Kiraya</option>
+              <option>Bijli</option>
+              <option>Dhaga / Maal</option>
+              <option>Machine / Repair</option>
+              <option>Chai-Nashta</option>
+              <option>Transport</option>
+              <option>Staff / Salary</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label>Amount (₹)
+            <input type="number" id="expenseAmount" inputmode="decimal" min="0" step="0.01" required />
+          </label>
+          <label>Date
+            <input type="date" id="expenseDate" required />
+          </label>
+          <label>Note
+            <input type="text" id="expenseNote" placeholder="optional" />
+          </label>
+          <button type="submit" class="btn btn-primary span-2">+ Kharcha add karein</button>
+        </form>
+        <div class="month-total">Is mahine ka kharcha: <b id="kharchaTotal">₹0</b></div>
+        <div id="kharchaByCategory" class="category-chips"></div>
+        <div class="table-wrap"><table id="expenseTable">
+          <thead><tr><th>Date</th><th>Kis cheez ka</th><th>Amount</th><th>Note</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </section>
+
       <!-- Backup -->
       <section id="backupView" class="view hidden">
         <h2>Backup</h2>
-        <p class="muted">Aapka saara data sirf isi phone mein save hota hai. Phone kho jaye, app hat jaye ya browser data saaf ho jaye toh data chala jayega — isliye yahan se backup file download karke WhatsApp/Google Drive pe rakhte rahiye. Naye phone pe usi file ko Import karke sab wapas aa jayega.</p>
+        <p class="muted">Aapka saara data sirf isi phone mein save hota hai. Phone kho jaye, app hat jaye ya browser data saaf ho jaye toh data chala jayega — isliye backup file WhatsApp/Google Drive pe bhejte rahiye. Naye phone pe usi file ko Import karke sab wapas aa jayega.</p>
+        <p id="lastBackupLabel" class="last-backup"></p>
         <div class="backup-actions">
-          <button type="button" class="btn btn-primary" id="exportJsonBtn">⬇️ Export JSON</button>
+          <button type="button" class="btn btn-primary" id="shareBackupBtn">📤 Backup bhejo (WhatsApp / Drive)</button>
+          <button type="button" class="btn btn-ghost" id="exportJsonBtn">⬇️ Phone mein download</button>
           <label class="btn btn-ghost file-btn">
-            ⬆️ Import JSON
-            <input type="file" id="importJsonInput" accept="application/json" hidden />
+            ⬆️ Backup se wapas laao (Import)
+            <input type="file" id="importJsonInput" accept="application/json,.json" hidden />
           </label>
         </div>
         <p id="backupStatus" class="muted"></p>
@@ -267,6 +329,28 @@
         <h3 id="vyapariFormTitle">Naya Vyapari</h3>
         <button type="button" class="icon-btn modal-close" data-close="vyapariFormModal">✕</button>
       </div>
+
+      <section id="vyapariPaySection" class="pay-section hidden">
+        <div class="money-summary" id="vyapariMoneySummary"></div>
+        <form id="vyapariPayForm" class="entry-form">
+          <label>Mila paisa (₹)
+            <input type="number" id="vyapariPayAmount" inputmode="decimal" min="0" step="0.01" required />
+          </label>
+          <label>Date
+            <input type="date" id="vyapariPayDate" required />
+          </label>
+          <label class="span-2">Note
+            <input type="text" id="vyapariPayNote" placeholder="optional - cash, UPI..." />
+          </label>
+          <button type="submit" class="btn btn-primary span-2">+ Payment add karein</button>
+        </form>
+        <div class="table-wrap"><table id="vyapariPayTable">
+          <thead><tr><th>Date</th><th>Mila</th><th>Note</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <h4 class="section-title">Lot ki details</h4>
+      </section>
+
       <form id="vyapariForm">
         <input type="hidden" id="vyapariFormId" />
         <div class="entry-form">
@@ -276,9 +360,10 @@
           <label>Lot Pieces
             <input type="number" id="vyapariLotPcs" inputmode="numeric" min="0" step="1" value="0" />
           </label>
-          <label>Rate / Piece (₹)
+          <label>Ek piece ka rate (₹)
             <input type="number" id="vyapariRatePerPc" inputmode="decimal" min="0" step="0.01" value="0" />
           </label>
+          <p class="lot-value span-2" id="vyapariLotValue"></p>
           <label>Design
             <input type="text" id="vyapariDesign" />
           </label>
@@ -290,7 +375,6 @@
         <div class="status-checks">
           <label class="checkbox-label"><input type="checkbox" id="vyapariDelivered" /> Maal de diya (Delivered)</label>
           <label class="checkbox-label"><input type="checkbox" id="vyapariLotReceived" /> Lot aa gaya</label>
-          <label class="checkbox-label"><input type="checkbox" id="vyapariPaymentReceived" /> Payment mil gaya</label>
         </div>
 
         <details class="more-details">
@@ -317,12 +401,6 @@
             <label>Lot note
               <input type="text" id="vyapariLotReceivedNote" />
             </label>
-            <label>Payment ki date
-              <input type="date" id="vyapariPaymentReceivedDate" />
-            </label>
-            <label>Payment note
-              <input type="text" id="vyapariPaymentReceivedNote" />
-            </label>
             <label class="span-2">Notes
               <textarea id="vyapariNotes" rows="2"></textarea>
             </label>
@@ -335,6 +413,40 @@
           <button type="submit" class="btn btn-primary">Save</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Karigar period report -->
+  <div id="reportModal" class="modal hidden">
+    <div class="modal-box modal-box-wide">
+      <div class="modal-head">
+        <h3>Karigar Hisaab</h3>
+        <button type="button" class="icon-btn modal-close" data-close="reportModal">✕</button>
+      </div>
+      <div class="filter-group range-buttons" id="reportRangeButtons">
+        <button type="button" class="filter-btn active" data-range="thisWeek">Is hafta</button>
+        <button type="button" class="filter-btn" data-range="lastWeek">Pichhla hafta</button>
+        <button type="button" class="filter-btn" data-range="thisMonth">Is mahina</button>
+        <button type="button" class="filter-btn" data-range="lastMonth">Pichhla mahina</button>
+      </div>
+      <div class="entry-form">
+        <label>Kab se
+          <input type="date" id="reportFrom" />
+        </label>
+        <label>Kab tak
+          <input type="date" id="reportTo" />
+        </label>
+      </div>
+      <div class="table-wrap"><table id="reportTable">
+        <thead><tr><th>Karigar</th><th>Pcs</th><th>Kamai</th><th>Kharchi</th><th>Diya</th><th>Kul Baaki</th></tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table></div>
+      <p class="muted small">Kamai, Kharchi aur Diya chune gaye dino ke hain. Kul Baaki shuru se ab tak ka hai — itna dena hai.</p>
+      <div class="ledger-actions">
+        <button type="button" class="btn btn-ghost" id="reportPdfBtn">📄 PDF</button>
+        <button type="button" class="btn btn-ghost" id="reportWhatsAppBtn">📱 WhatsApp</button>
+      </div>
     </div>
   </div>
 
@@ -353,6 +465,8 @@
 <script src="js/karigar.js"></script>
 <script src="js/vyapari.js"></script>
 <script src="js/dashboard.js"></script>
+<script src="js/kharcha.js"></script>
+<script src="js/report.js"></script>
 <script src="js/backup.js"></script>
 <script src="js/profile.js"></script>
 <script src="js/app.js"></script>

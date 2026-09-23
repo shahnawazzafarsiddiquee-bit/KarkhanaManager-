@@ -1,6 +1,12 @@
 (function () {
   const KM = window.KM || (window.KM = {});
-  const { formatCurrency, formatDate } = KM.utils;
+  const { formatDate, vyapariMoney } = KM.utils;
+
+  // jsPDF's built-in fonts have no ₹ glyph (it prints as garbage), so PDFs
+  // spell the currency out.
+  function formatCurrency(n) {
+    return "Rs. " + (Number(n) || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  }
 
   function letterhead(doc, business, title) {
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -153,16 +159,19 @@
       let y = letterhead(doc, business, "Vyapari Challan");
 
       doc.setFontSize(10);
+      const money = vyapariMoney(v);
       const fields = [
         ["Trader", v.trader || "-"],
         ["Fabric", v.fabric || "-"],
         ["Design", v.design || "-"],
         ["Color", v.color || "-"],
         ["Sizes", v.sizes || "-"],
-        ["Lot Pieces", v.lotPcs || 0],
-        ["Rate / Piece", formatCurrency(v.ratePerPc)],
+        ["Lot", `${v.lotPcs || 0} pcs x ${formatCurrency(v.ratePerPc)}/pc`],
+        ["Lot Value", formatCurrency(money.total)],
+        ["Received", formatCurrency(money.received)],
+        ["Balance", formatCurrency(Math.max(money.balance, 0))],
         ["Total Meters", v.totalMeters || 0],
-        ["Color-wise Meters", v.colorMeters || "-"],
+        ["Color Meters", v.colorMeters || "-"],
         ["Due Date", formatDate(v.dueDate)],
         ["Delivery Status", v.deliveryStatus === "delivered" ? "Delivered" : "Pending"],
       ];
@@ -188,10 +197,27 @@
         y += 6 + split.length * 5 + 4;
       }
 
+      const payments = [...(v.payments || [])].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+      if (payments.length) {
+        doc.setFont(undefined, "bold");
+        doc.text("Payments received", 14, y);
+        doc.setFont(undefined, "normal");
+        doc.autoTable({
+          startY: y + 3,
+          head: [["Date", "Amount", "Note"]],
+          body: payments.map((p) => [formatDate(p.date), formatCurrency(p.amount), p.note || "-"]),
+          theme: "grid",
+          headStyles: { fillColor: [31, 111, 235] },
+          styles: { fontSize: 8 },
+        });
+        y = doc.lastAutoTable.finalY + 8;
+      }
+
       y += 6;
+      const lastPayment = payments.length ? payments[payments.length - 1].date : "";
       let x = 14;
       x += statusStamp(doc, x, y, "LOT RECEIVED", !!v.lotReceived, v.lotReceivedDate) + 10;
-      statusStamp(doc, x, y, "PAYMENT RECEIVED", !!v.paymentReceived, v.paymentReceivedDate);
+      statusStamp(doc, x, y, "PAYMENT", money.total > 0 && money.balance <= 0, lastPayment);
 
       y += 40;
       if (y > 250) {
@@ -206,6 +232,29 @@
       doc.text("Factory Signature", 120, y + 6);
 
       doc.save(`${(v.trader || "vyapari").replace(/\s+/g, "_")}_challan.pdf`);
+    },
+
+    karigarReport(business, label, rows, totals) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const y = letterhead(doc, business, `Karigar Hisaab: ${label}`);
+      doc.autoTable({
+        startY: y,
+        head: [["Karigar", "Pcs", "Kamai", "Kharchi", "Diya", "Kul Baaki"]],
+        body: rows.map((r) => [
+          r.name, r.pieces, formatCurrency(r.earned), formatCurrency(r.advance),
+          formatCurrency(r.paid), formatCurrency(Math.max(r.balance, 0)),
+        ]),
+        foot: totals ? [["Total", totals.pieces, formatCurrency(totals.earned), formatCurrency(totals.advance),
+          formatCurrency(totals.paid), formatCurrency(totals.balance)]] : [],
+        theme: "grid",
+        headStyles: { fillColor: [31, 111, 235] },
+        footStyles: { fillColor: [230, 236, 245], textColor: 20, fontStyle: "bold" },
+        styles: { fontSize: 9 },
+      });
+      doc.setFontSize(8);
+      doc.text("Kamai, Kharchi, Diya: chune gaye dino ke. Kul Baaki: shuru se ab tak ka.", 14, doc.lastAutoTable.finalY + 8);
+      doc.save(`karigar_hisaab_${label.replace(/[^0-9A-Za-z]+/g, "_")}.pdf`);
     },
   };
 })();

@@ -21,9 +21,6 @@
     const totalEarnings = workEarnings + sampleEarnings;
     const remaining = totalEarnings - totalAdvance - totalPayments;
     const totalPieces = workLogs.reduce((s, w) => s + (w.pieces || 0), 0);
-    const thisMonthPieces = workLogs
-      .filter((w) => w.date && w.date.slice(0, 7) === todayStr().slice(0, 7))
-      .reduce((s, w) => s + (w.pieces || 0), 0);
     return {
       workEarnings,
       sampleEarnings,
@@ -32,7 +29,6 @@
       totalPayments,
       remaining,
       totalPieces,
-      thisMonthPieces,
       status: remaining <= 0 ? "Paid" : "Unpaid",
     };
   }
@@ -48,7 +44,6 @@
         state.totals[id] = computeTotals(state.subData[id]);
         render();
         if (KM.state.currentKarigarId === id) renderDetail(id);
-        if (KM.dashboard) KM.dashboard.render();
       });
     });
   }
@@ -343,5 +338,5 @@
     document.getElementById("karigarDetailModal").addEventListener("click", handleRowDelete);
   }
 
-  KM.karigar = { init, render, syncSubscriptions, computeTotals, getTotals: (id) => state.totals[id] };
+  KM.karigar = { init, render, syncSubscriptions, computeTotals };
 })();

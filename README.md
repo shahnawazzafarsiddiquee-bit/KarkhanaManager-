@@ -20,11 +20,13 @@ js/utils.js              Shared helpers (currency, date, toast, escaping)
 js/store.js              On-device data store (localStorage) + shared state
 js/profile.js            Business name / owner name setup and editing
 js/theme.js               Dark/light toggle
-js/pdf.js                 jsPDF: karigar statement + vyapari challan
+js/pdf.js                 jsPDF: karigar statement, vyapari challan, hisaab report
 js/karigar.js              Karigar module (list, ledger, calculations, WhatsApp, PDF)
-js/vyapari.js               Vyapari module (list, statuses, filters, PDF challan)
-js/dashboard.js              Dashboard stat cards
-js/backup.js                  JSON export/import
+js/vyapari.js               Vyapari module (lot value, payments received, filters, PDF challan)
+js/dashboard.js              Home: month ka hisaab (munafa), stat cards, backup reminder
+js/kharcha.js                 Factory kharcha (expenses) by month and category
+js/report.js                  Hafte/mahine ka karigar hisaab (WhatsApp + PDF)
+js/backup.js                  Backup share/download + import
 js/app.js                       Bootstraps everything and routing
 manifest.json                   PWA manifest
 sw.js                             Minimal service worker (offline app shell cache)
@@ -47,19 +49,35 @@ icons/icon.svg, icon-192.png, icon-512.png   App icons (placeholders - swap with
 - Search + filter (All / Unpaid)
 - WhatsApp summary share, PDF statement with your business letterhead
 
+**Karigar hisaab report** (Karigar tab → 📊 Hisaab)
+- Is hafta / Pichhla hafta / Is mahina / Pichhla mahina, ya apni dates
+- Har karigar: pieces, kamai, kharchi, diya, aur kul baaki (shuru se ab tak)
+- Total row, WhatsApp share, PDF
+
 **Vyapari module**
-- Trader, fabric, lot pieces, rate/piece, sizes, color-wise meters, total
-  meters, color, design, due date, notes
-- Delivery status (pending/delivered), lot-received (+date/note),
-  payment-received-from-vyapari (+date/note)
-- Search + filter (All / Pending / Overdue)
-- PDF challan with letterhead + LOT/PAYMENT status stamps + signature lines
+- Trader, fabric, lot pieces, **ek piece ka rate**, sizes, color-wise meters,
+  total meters, color, design, due date, notes
+- Lot value apne aap: `50 pcs × ₹80 = ₹4,000` — card aur challan dono pe dikhta hai
+- Vyapari se mila paisa: kitni bhi baar (date, amount, note) → Mila / Baaki
+- Delivery status (pending/delivered), lot-received (+date/note)
+- Search + filter (All / Pending / Overdue / Baaki)
+- PDF challan with letterhead, lot value, payments list, LOT/PAYMENT stamps,
+  signature lines
+
+**Kharcha + Munafa**
+- Kharcha tab: kiraya, bijli, dhaga/maal, machine repair, chai-nashta, transport,
+  staff salary, other — month-wise total aur category-wise
+- Home pe "Mahine ka hisaab": vyapari se mila − karigar ko diya − kharcha = munafa
+  (jis mahine paisa aaya/gaya usi mahine mein ginti)
+
+**Backup**
+- 📤 Backup bhejein: phone ka share sheet (WhatsApp / Drive / email) pe seedha file
+- Download aur Import bhi (import purane data ke saath jud jaata hai)
+- 7 din se backup nahi liya to Home pe yaad dilata hai
 
 **Other**
-- Dashboard with totals (karigars, pieces this month, payable, vyapari
-  pending/overdue)
+- Dashboard: karigar ko dena baaki, vyapari se lena baaki, pending/overdue lots
 - Dark / light theme, mobile-responsive
-- JSON export/import backup
 - Works as an installable PWA (offline app shell)
 
 ---
@@ -149,14 +167,17 @@ Console requires your own developer account and human review.
 5. Click **📱 WhatsApp** → opens WhatsApp with a pre-filled summary message
    (you still have to hit Send yourself — WhatsApp doesn't allow silent
    auto-sending from a web page).
-6. **Vyapari tab → + Naya Vyapari** → fill trader/fabric/lot details, tick
-   "Lot Received" and/or "Payment Received" with dates → Save.
+6. **Vyapari tab → + Naya Vyapari** → fill trader, lot pieces and ek piece ka
+   rate (lot value shows live) → Save. Reopen the card → **Paisa mila** form →
+   add a payment → Mila / Baaki update, card shows "Baaki ₹…".
 7. Reopen that vyapari card → **📄 PDF Challan** → downloads a PDF with
-   letterhead, lot details, and green "DONE"/red "PENDING" status stamps.
-8. **Backup tab → Export JSON** → downloads your full business data as a
-   `.json` file. Open the app in another browser or phone and **Import JSON**
+   letterhead, lot value, payments and green "DONE"/red "PENDING" stamps.
+8. **Kharcha tab** → add an expense → Home pe "Mahine ka hisaab" mein munafa
+   update hota hai. **Karigar tab → 📊 Hisaab** → hafte ka report, PDF/WhatsApp.
+9. **Backup tab → 📤 Backup bhejo** (or Download) → your full business data
+   as a `.json` file. Open the app in another browser or phone and **Import**
    that file to confirm restore works.
-9. Toggle the 🌙/☀️ button in the header to confirm dark/light theme, and
+10. Toggle the 🌙/☀️ button in the header to confirm dark/light theme, and
    resize the browser (or open on a phone) to confirm the layout stays usable.
 
 ## Notes / known limits
@@ -166,7 +187,7 @@ Console requires your own developer account and human review.
   WhatsApp platform restriction, not something a web app can bypass).
 - **Data lives on one device.** Nothing is sent to a server, so the app
   works fully offline, but clearing the browser's site data, uninstalling the
-  app or losing the phone loses the data. The Backup tab's JSON export is the
+  app or losing the phone loses the data. The Backup tab's file is the
   only copy that can survive that - take one regularly.
 - Deleting a karigar also deletes their work log / sample work / payment
   history — this is intentional (Delete is a destructive action with a
