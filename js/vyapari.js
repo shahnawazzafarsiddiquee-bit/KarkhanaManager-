@@ -83,6 +83,10 @@
     document.getElementById("vyapariPaymentReceivedNote").value = v ? v.paymentReceivedNote || "" : "";
     document.getElementById("deleteVyapariBtn").classList.toggle("hidden", !v);
     document.getElementById("vyapariPdfBtn").classList.toggle("hidden", !v);
+    // Keep the optional section collapsed unless this record already uses it.
+    const extras = ["fabric", "color", "sizes", "colorMeters", "totalMeters", "notes",
+      "lotReceivedDate", "lotReceivedNote", "paymentReceivedDate", "paymentReceivedNote"];
+    document.querySelector("#vyapariForm .more-details").open = !!v && extras.some((f) => v[f]);
     document.getElementById("vyapariFormModal").classList.remove("hidden");
   }
 
@@ -150,6 +154,13 @@
   }
 
   function init() {
+    [["vyapariLotReceived", "vyapariLotReceivedDate"], ["vyapariPaymentReceived", "vyapariPaymentReceivedDate"]]
+      .forEach(([checkId, dateId]) => {
+        document.getElementById(checkId).addEventListener("change", (e) => {
+          const date = document.getElementById(dateId);
+          if (e.target.checked && !date.value) date.value = todayStr();
+        });
+      });
     document.getElementById("addVyapariBtn").addEventListener("click", () => openForm(null));
     document.getElementById("vyapariForm").addEventListener("submit", handleFormSubmit);
     document.getElementById("deleteVyapariBtn").addEventListener("click", handleDelete);

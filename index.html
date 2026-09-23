@@ -191,13 +191,23 @@
 
       <!-- Work log -->
       <div class="ledger-panel active" id="panelWork">
-        <form id="workLogForm" class="inline-form">
-          <input type="date" id="workDate" required />
-          <input type="number" id="workPieces" placeholder="Pieces" min="0" step="1" required />
-          <input type="number" id="workRate" placeholder="Rate" min="0" step="0.01" required />
-          <input type="number" id="workAdvance" placeholder="Advance (kharchi)" min="0" step="0.01" value="0" />
-          <input type="text" id="workNote" placeholder="Note (optional)" />
-          <button type="submit" class="btn btn-primary">Add</button>
+        <form id="workLogForm" class="entry-form">
+          <label>Pieces
+            <input type="number" id="workPieces" inputmode="numeric" min="0" step="1" required />
+          </label>
+          <label>Rate (₹)
+            <input type="number" id="workRate" inputmode="decimal" min="0" step="0.01" required />
+          </label>
+          <label>Kharchi / Advance (₹)
+            <input type="number" id="workAdvance" inputmode="decimal" min="0" step="0.01" value="0" />
+          </label>
+          <label>Date
+            <input type="date" id="workDate" required />
+          </label>
+          <label class="span-2">Note
+            <input type="text" id="workNote" placeholder="optional" />
+          </label>
+          <button type="submit" class="btn btn-primary span-2">+ Add</button>
         </form>
         <div class="table-wrap"><table id="workLogTable">
           <thead><tr><th>Date</th><th>Pieces</th><th>Rate</th><th>Amount</th><th>Advance</th><th>Note</th><th></th></tr></thead>
@@ -207,12 +217,20 @@
 
       <!-- Sample work -->
       <div class="ledger-panel" id="panelSample">
-        <form id="sampleWorkForm" class="inline-form">
-          <input type="date" id="sampleDate" required />
-          <input type="number" id="sampleQty" placeholder="Qty" min="0" step="1" required />
-          <input type="number" id="sampleRate" placeholder="Rate" min="0" step="0.01" required />
-          <input type="text" id="sampleNote" placeholder="Note (optional)" />
-          <button type="submit" class="btn btn-primary">Add</button>
+        <form id="sampleWorkForm" class="entry-form">
+          <label>Qty
+            <input type="number" id="sampleQty" inputmode="numeric" min="0" step="1" required />
+          </label>
+          <label>Rate (₹)
+            <input type="number" id="sampleRate" inputmode="decimal" min="0" step="0.01" required />
+          </label>
+          <label>Date
+            <input type="date" id="sampleDate" required />
+          </label>
+          <label>Note
+            <input type="text" id="sampleNote" placeholder="optional" />
+          </label>
+          <button type="submit" class="btn btn-primary span-2">+ Add</button>
         </form>
         <div class="table-wrap"><table id="sampleWorkTable">
           <thead><tr><th>Date</th><th>Qty</th><th>Rate</th><th>Amount</th><th>Note</th><th></th></tr></thead>
@@ -222,11 +240,17 @@
 
       <!-- Payments -->
       <div class="ledger-panel" id="panelPayment">
-        <form id="paymentForm" class="inline-form">
-          <input type="date" id="paymentDate" required />
-          <input type="number" id="paymentAmount" placeholder="Amount" min="0" step="0.01" required />
-          <input type="text" id="paymentNote" placeholder="Note (optional)" />
-          <button type="submit" class="btn btn-primary">Add</button>
+        <form id="paymentForm" class="entry-form">
+          <label>Amount (₹)
+            <input type="number" id="paymentAmount" inputmode="decimal" min="0" step="0.01" required />
+          </label>
+          <label>Date
+            <input type="date" id="paymentDate" required />
+          </label>
+          <label class="span-2">Note
+            <input type="text" id="paymentNote" placeholder="optional" />
+          </label>
+          <button type="submit" class="btn btn-primary span-2">+ Add</button>
         </form>
         <div class="table-wrap"><table id="paymentTable">
           <thead><tr><th>Date</th><th>Amount</th><th>Note</th><th></th></tr></thead>
@@ -245,30 +269,15 @@
       </div>
       <form id="vyapariForm">
         <input type="hidden" id="vyapariFormId" />
-        <div class="form-grid">
-          <label>Trader Name *
+        <div class="entry-form">
+          <label class="span-2">Vyapari ka Naam *
             <input type="text" id="vyapariTrader" required />
           </label>
-          <label>Fabric
-            <input type="text" id="vyapariFabric" />
-          </label>
           <label>Lot Pieces
-            <input type="number" id="vyapariLotPcs" min="0" step="1" value="0" />
+            <input type="number" id="vyapariLotPcs" inputmode="numeric" min="0" step="1" value="0" />
           </label>
-          <label>Rate per Piece
-            <input type="number" id="vyapariRatePerPc" min="0" step="0.01" value="0" />
-          </label>
-          <label>Sizes
-            <input type="text" id="vyapariSizes" placeholder="S/M/L/XL" />
-          </label>
-          <label>Color-wise Meters
-            <input type="text" id="vyapariColorMeters" placeholder="Red-20, Blue-15" />
-          </label>
-          <label>Total Meters
-            <input type="number" id="vyapariTotalMeters" min="0" step="0.01" value="0" />
-          </label>
-          <label>Color
-            <input type="text" id="vyapariColor" />
+          <label>Rate / Piece (₹)
+            <input type="number" id="vyapariRatePerPc" inputmode="decimal" min="0" step="0.01" value="0" />
           </label>
           <label>Design
             <input type="text" id="vyapariDesign" />
@@ -277,25 +286,48 @@
             <input type="date" id="vyapariDueDate" />
           </label>
         </div>
-        <label>Notes
-          <textarea id="vyapariNotes" rows="2"></textarea>
-        </label>
 
-        <div class="status-grid">
-          <div class="status-box">
-            <label class="checkbox-label"><input type="checkbox" id="vyapariDelivered" /> Delivered</label>
-          </div>
-          <div class="status-box">
-            <label class="checkbox-label"><input type="checkbox" id="vyapariLotReceived" /> Lot Received</label>
-            <input type="date" id="vyapariLotReceivedDate" />
-            <input type="text" id="vyapariLotReceivedNote" placeholder="Note" />
-          </div>
-          <div class="status-box">
-            <label class="checkbox-label"><input type="checkbox" id="vyapariPaymentReceived" /> Payment Received (from Vyapari)</label>
-            <input type="date" id="vyapariPaymentReceivedDate" />
-            <input type="text" id="vyapariPaymentReceivedNote" placeholder="Note" />
-          </div>
+        <div class="status-checks">
+          <label class="checkbox-label"><input type="checkbox" id="vyapariDelivered" /> Maal de diya (Delivered)</label>
+          <label class="checkbox-label"><input type="checkbox" id="vyapariLotReceived" /> Lot aa gaya</label>
+          <label class="checkbox-label"><input type="checkbox" id="vyapariPaymentReceived" /> Payment mil gaya</label>
         </div>
+
+        <details class="more-details">
+          <summary>Aur details (optional)</summary>
+          <div class="entry-form">
+            <label>Fabric
+              <input type="text" id="vyapariFabric" />
+            </label>
+            <label>Color
+              <input type="text" id="vyapariColor" />
+            </label>
+            <label>Sizes
+              <input type="text" id="vyapariSizes" placeholder="S/M/L/XL" />
+            </label>
+            <label>Total Meters
+              <input type="number" id="vyapariTotalMeters" inputmode="decimal" min="0" step="0.01" value="0" />
+            </label>
+            <label class="span-2">Color-wise Meters
+              <input type="text" id="vyapariColorMeters" placeholder="Red-20, Blue-15" />
+            </label>
+            <label>Lot aane ki date
+              <input type="date" id="vyapariLotReceivedDate" />
+            </label>
+            <label>Lot note
+              <input type="text" id="vyapariLotReceivedNote" />
+            </label>
+            <label>Payment ki date
+              <input type="date" id="vyapariPaymentReceivedDate" />
+            </label>
+            <label>Payment note
+              <input type="text" id="vyapariPaymentReceivedNote" />
+            </label>
+            <label class="span-2">Notes
+              <textarea id="vyapariNotes" rows="2"></textarea>
+            </label>
+          </div>
+        </details>
 
         <div class="modal-actions">
           <button type="button" class="btn btn-ghost hidden" id="vyapariPdfBtn">📄 PDF Challan</button>

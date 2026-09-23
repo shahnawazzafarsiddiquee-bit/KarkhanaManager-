@@ -45,8 +45,8 @@ body {
 button { font-family: inherit; cursor: pointer; }
 input, select, textarea {
   font-family: inherit;
-  font-size: 0.95rem;
-  padding: 9px 11px;
+  font-size: 1rem;
+  padding: 11px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -61,7 +61,7 @@ label {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--text-muted);
   margin-bottom: 10px;
 }
@@ -69,8 +69,9 @@ label {
 .btn {
   border: none;
   border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 0.9rem;
+  padding: 12px 18px;
+  min-height: 44px;
+  font-size: 1rem;
   font-weight: 600;
   background: var(--surface-2);
   color: var(--text);
@@ -111,20 +112,6 @@ label {
 .auth-logo { font-size: 2.4rem; }
 .auth-brand h1 { font-size: 1.4rem; margin: 6px 0 2px; }
 .auth-sub { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
-.auth-tabs { display: flex; gap: 6px; margin-bottom: 16px; background: var(--surface-2); border-radius: 10px; padding: 4px; }
-.auth-tab {
-  flex: 1; background: transparent; border: none; padding: 9px; border-radius: 8px;
-  font-weight: 600; color: var(--text-muted);
-}
-.auth-tab.active { background: var(--primary); color: #fff; }
-.auth-error {
-  background: rgba(214, 69, 69, 0.1); color: var(--danger);
-  padding: 8px 10px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 10px;
-}
-.auth-info {
-  background: rgba(31, 157, 85, 0.1); color: var(--success);
-  padding: 8px 10px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 10px;
-}
 
 /* ===== App shell ===== */
 .topbar {
@@ -204,12 +191,17 @@ main#views { padding: 20px; max-width: 1100px; margin: 0 auto; }
 .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .modal-head h3 { margin: 0; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
-.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0 12px; }
+.entry-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; margin-bottom: 12px; }
+.entry-form label { margin-bottom: 10px; }
+.entry-form .span-2 { grid-column: 1 / -1; }
 
-.status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 14px 0; }
-.status-box { border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; background: var(--surface-2); }
-.checkbox-label { flex-direction: row; align-items: center; gap: 8px; font-weight: 600; color: var(--text); }
-.checkbox-label input { width: auto; }
+.status-checks { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 12px; }
+.checkbox-label { flex-direction: row; align-items: center; gap: 10px; font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.checkbox-label input { width: 22px; height: 22px; }
+
+.more-details { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; background: var(--surface-2); }
+.more-details summary { cursor: pointer; font-weight: 600; color: var(--primary); }
+.more-details[open] summary { margin-bottom: 12px; }
 
 .ledger-summary {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -228,9 +220,6 @@ main#views { padding: 20px; max-width: 1100px; margin: 0 auto; }
 .ledger-panel { display: none; }
 .ledger-panel.active { display: block; }
 
-.inline-form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-.inline-form input { width: auto; flex: 1; min-width: 110px; }
-.inline-form .btn { flex-shrink: 0; }
 
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }

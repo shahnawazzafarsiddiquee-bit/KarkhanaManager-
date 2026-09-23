@@ -164,13 +164,29 @@
   }
 
   // ---- Detail / ledger modal ----
+  // Today's date and the karigar's usual rate, so a normal day's entry is
+  // just the piece count.
+  function fillEntryDefaults(formId) {
+    const k = KM.state.karigars.find((x) => x.id === KM.state.currentKarigarId);
+    const rate = k && k.defaultRate ? k.defaultRate : "";
+    const form = document.getElementById(formId);
+    form.reset();
+    if (formId === "workLogForm") {
+      document.getElementById("workDate").value = todayStr();
+      document.getElementById("workRate").value = rate;
+      document.getElementById("workAdvance").value = 0;
+    } else if (formId === "sampleWorkForm") {
+      document.getElementById("sampleDate").value = todayStr();
+      document.getElementById("sampleRate").value = rate;
+    } else {
+      document.getElementById("paymentDate").value = todayStr();
+    }
+  }
+
   function openDetail(id) {
     KM.state.currentKarigarId = id;
     document.getElementById("karigarDetailModal").classList.remove("hidden");
-    ["workDate", "sampleDate", "paymentDate"].forEach((elId) => {
-      const el = document.getElementById(elId);
-      if (el && !el.value) el.value = todayStr();
-    });
+    ["workLogForm", "sampleWorkForm", "paymentForm"].forEach(fillEntryDefaults);
     renderDetail(id);
   }
 
@@ -259,44 +275,43 @@
   }
 
   // ---- Forms for work/sample/payment entries ----
-  async function handleWorkLogSubmit(e) {
+  async function saveEntry(e, add, data) {
     e.preventDefault();
-    const data = {
+    try {
+      await add(KM.state.currentKarigarId, data);
+    } catch (err) {
+      toast(err.message || "Save nahi ho paya", true);
+      return;
+    }
+    fillEntryDefaults(e.target.id);
+    toast("Entry add ho gayi");
+  }
+
+  function handleWorkLogSubmit(e) {
+    saveEntry(e, KM.db.addWorkLog, {
       date: document.getElementById("workDate").value,
       pieces: document.getElementById("workPieces").value,
       rate: document.getElementById("workRate").value,
       advance: document.getElementById("workAdvance").value,
       note: document.getElementById("workNote").value,
-    };
-    await KM.db.addWorkLog(KM.state.currentKarigarId, data);
-    e.target.reset();
-    document.getElementById("workDate").value = todayStr();
-    document.getElementById("workAdvance").value = 0;
+    });
   }
 
-  async function handleSampleSubmit(e) {
-    e.preventDefault();
-    const data = {
+  function handleSampleSubmit(e) {
+    saveEntry(e, KM.db.addSampleWork, {
       date: document.getElementById("sampleDate").value,
       qty: document.getElementById("sampleQty").value,
       rate: document.getElementById("sampleRate").value,
       note: document.getElementById("sampleNote").value,
-    };
-    await KM.db.addSampleWork(KM.state.currentKarigarId, data);
-    e.target.reset();
-    document.getElementById("sampleDate").value = todayStr();
+    });
   }
 
-  async function handlePaymentSubmit(e) {
-    e.preventDefault();
-    const data = {
+  function handlePaymentSubmit(e) {
+    saveEntry(e, KM.db.addPayment, {
       date: document.getElementById("paymentDate").value,
       amount: document.getElementById("paymentAmount").value,
       note: document.getElementById("paymentNote").value,
-    };
-    await KM.db.addPayment(KM.state.currentKarigarId, data);
-    e.target.reset();
-    document.getElementById("paymentDate").value = todayStr();
+    });
   }
 
   function init() {
