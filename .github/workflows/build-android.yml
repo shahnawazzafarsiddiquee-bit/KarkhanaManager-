@@ -63,9 +63,9 @@ jobs:
           printf '{"jdkPath":"%s","androidSdkPath":"%s"}\n' "$JAVA_HOME" "$SDK" > ~/.bubblewrap/config.json
           cat ~/.bubblewrap/config.json
 
-      # Pipeline smoke test: proves everything downstream works while the real
-      # keystore secret is still being sorted out. The key lives and dies with
-      # the run, so nothing it signs can be shipped or upgraded later.
+      # Pipeline smoke test and a usable APK before the real key exists. The
+      # key lives and dies with the run, so nothing it signs can be shipped to
+      # Play or upgraded in place later.
       - name: Generate throwaway keystore
         if: ${{ inputs.use_test_key }}
         run: |
@@ -76,39 +76,29 @@ jobs:
             -dname "CN=Karakhana Test, O=Test, C=IN"
           echo "SIGNING_PASSWORD=testkey123" >> "$GITHUB_ENV"
 
-      - name: Restore signing keystore
+      # The key itself is committed encrypted (see setup-signing.yml); only its
+      # password is a secret.
+      - name: Decrypt signing keystore
         if: ${{ !inputs.use_test_key }}
         env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          RAW: ${{ secrets.SIGNING_PASSWORD }}
         run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 is not set. Add the signing secrets before running this workflow."
+          if [ ! -f signing/upload-keystore.jks.enc ]; then
+            echo "::error::Signing key abhi bani nahi hai. Pehle Actions -> 'Create signing key' chalaiye."
             exit 1
           fi
-          # Values copied out of a chat pick up line breaks and the backticks or
-          # quotes around code; none of those are valid in either secret.
-          sanitize() { printf '%s' "$1" | tr -d '[:space:]`"'"'"; }
-          cleaned=$(sanitize "$KEYSTORE_BASE64")
-          KEYSTORE_PASSWORD=$(sanitize "$KEYSTORE_PASSWORD")
-          # Shape only - never the value - so a bad paste can be told apart from
-          # a truncated one without leaking key material into the log.
-          echo "Secret length after whitespace strip: ${#cleaned} (expected 3704)"
-          stray=$(printf '%s' "$cleaned" | tr -d 'A-Za-z0-9+/=' | wc -c)
-          echo "Characters outside the base64 alphabet: $stray"
-          if ! printf '%s' "$cleaned" | base64 -d > android.keystore 2>/dev/null; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64 - re-copy the whole line into the secret."
+          export PW=$(printf '%s' "$RAW" | tr -d '[:space:]')
+          if ! openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 \
+               -in signing/upload-keystore.jks.enc -out android.keystore -pass env:PW 2>/dev/null \
+             || ! keytool -list -keystore android.keystore -alias upload -storepass:env PW > /dev/null 2>&1; then
+            rm -f android.keystore
+            echo "::error::SIGNING_PASSWORD se key nahi khuli - secret mein wahi password hona chahiye jisse key bani thi."
             exit 1
           fi
-          echo "Keystore restored ($(stat -c%s android.keystore) bytes)."
-          if ! keytool -list -keystore android.keystore -alias upload -storepass "$KEYSTORE_PASSWORD" > /dev/null 2>&1; then
-            echo "::error::Keystore did not open with alias 'upload' and ANDROID_KEYSTORE_PASSWORD - check both secrets."
-            exit 1
-          fi
-          echo "::add-mask::$KEYSTORE_PASSWORD"
+          echo "::add-mask::$PW"
           # PKCS12 keystores share one password between store and key.
-          echo "SIGNING_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
-          echo "Keystore verified."
+          echo "SIGNING_PASSWORD=$PW" >> "$GITHUB_ENV"
+          echo "Keystore decrypted and verified."
 
       - name: Stamp version from run number
         run: |

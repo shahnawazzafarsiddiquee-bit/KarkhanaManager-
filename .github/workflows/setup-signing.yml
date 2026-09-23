@@ -1,0 +1,77 @@
+name: Create signing key
+
+# Run once. Generates the app's permanent upload key inside the runner,
+# encrypts it with the SIGNING_PASSWORD secret and commits only the encrypted
+# file, so the key never passes through a chat, a clipboard or a log. The
+# owner types the password straight into the secret; nobody else sees it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      replace_existing:
+        description: 'Replace an existing key. Only before the app is on Play - Play needs the SAME key for every update.'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check password
+        env:
+          RAW: ${{ secrets.SIGNING_PASSWORD }}
+        run: |
+          pw=$(printf '%s' "$RAW" | tr -d '[:space:]')
+          if [ ${#pw} -lt 12 ]; then
+            echo "::error::SIGNING_PASSWORD kam se kam 12 akshar ka hona chahiye (abhi ${#pw} hai)."
+            exit 1
+          fi
+
+      - name: Refuse to overwrite an existing key
+        if: ${{ !inputs.replace_existing }}
+        run: |
+          if [ -f signing/upload-keystore.jks.enc ]; then
+            echo "::error::Signing key pehle se bani hai. Play Store pe har update isi key se jaata hai, isliye isse badla nahi gaya."
+            exit 1
+          fi
+
+      - name: Generate and encrypt key
+        env:
+          RAW: ${{ secrets.SIGNING_PASSWORD }}
+        run: |
+          export PW=$(printf '%s' "$RAW" | tr -d '[:space:]')
+          umask 077
+          keytool -genkeypair -keystore "$RUNNER_TEMP/upload.jks" -alias upload \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass:env PW -keypass:env PW \
+            -dname "CN=Karakhana Manager, O=Brothers Creation, C=IN"
+          mkdir -p signing
+          openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt \
+            -in "$RUNNER_TEMP/upload.jks" -out signing/upload-keystore.jks.enc -pass env:PW
+          FP=$(keytool -list -v -keystore "$RUNNER_TEMP/upload.jks" -alias upload -storepass:env PW \
+            | sed -n 's/^[[:space:]]*SHA256: //p')
+          rm -f "$RUNNER_TEMP/upload.jks"
+          test -n "$FP"
+          echo "New certificate SHA-256: $FP"
+          # Android matches this fingerprint to decide the app owns the site.
+          FP="$FP" node -e '
+            const fs = require("fs");
+            const f = ".well-known/assetlinks.json";
+            const links = JSON.parse(fs.readFileSync(f, "utf8"));
+            links[0].target.sha256_cert_fingerprints = [process.env.FP];
+            fs.writeFileSync(f, JSON.stringify(links, null, 2) + "\n");
+          '
+
+      - name: Commit encrypted key
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add signing/upload-keystore.jks.enc .well-known/assetlinks.json
+          git commit -m "Add encrypted app signing key and its assetlinks fingerprint"
+          git push

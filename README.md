@@ -85,37 +85,31 @@ Run workflow**; it attaches `karakhana-manager.apk` and
 `startUrl`. The version code comes from the workflow run number, so every
 run is a higher version than the last, which is what Play requires.
 
-### Signing secrets
+### Signing key (one-time setup)
 
-Add these under **Settings → Secrets and variables → Actions**:
+The app's permanent upload key is created **inside GitHub Actions** and only
+its encrypted copy is committed (`signing/upload-keystore.jks.enc`, AES-256
+with PBKDF2). Nothing needs to be copied or pasted:
 
-| Secret | Value |
-| --- | --- |
-| `ANDROID_KEYSTORE_BASE64` | the keystore as one line of base64 (~3700 characters) |
-| `ANDROID_KEYSTORE_PASSWORD` | keystore password |
-| `ANDROID_KEY_PASSWORD` | key password |
+1. **Settings → Secrets and variables → Actions → New repository secret** —
+   name `SIGNING_PASSWORD`, value: a password you make up, at least 12
+   characters. Type it yourself and keep it somewhere safe; nobody else
+   needs to see it.
+2. **Actions → Create signing key → Run workflow.** It generates the key,
+   encrypts it with that password, commits it, and writes the certificate's
+   SHA-256 fingerprint into `.well-known/assetlinks.json`.
 
-The keystore itself is never committed. To create one and print the base64:
+After that every **Build Android APK & AAB** run signs with this key.
 
-```
-keytool -genkeypair -v -keystore upload-keystore.jks -alias upload \
-  -keyalg RSA -keysize 2048 -validity 10000
-base64 -w0 upload-keystore.jks
-```
+> **The key and its password are permanent.** Play accepts every update only
+> if it is signed with the same key as the first upload. Lose the password
+> and you can never update that Play listing. The workflow refuses to
+> replace an existing key unless you tick *replace existing* - only ever do
+> that before the app is on Play.
 
-Keep `upload-keystore.jks` and its password backed up somewhere safe. Lose
-them and you can never ship an update to the same Play listing.
-
-`.well-known/assetlinks.json` carries the SHA-256 fingerprint of that
-certificate, which is how Android verifies the app owns the site and drops
-the browser address bar. Change the signing key and the fingerprint there
-must change too:
-
-```
-keytool -list -v -keystore upload-keystore.jks -alias upload | grep SHA256
-```
-
-`.nojekyll` is what makes GitHub Pages serve that dot-directory at all.
+`.well-known/assetlinks.json` is how Android verifies the app owns the site
+and hides the browser address bar; `.nojekyll` is what makes GitHub Pages
+serve that dot-directory at all.
 
 > Running the workflow with **use test key** checked signs with a key
 > generated inside the run. That is only for checking the build works — the
