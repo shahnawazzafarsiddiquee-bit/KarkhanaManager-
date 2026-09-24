@@ -33,7 +33,7 @@ js/backup.js                  Backup share/download + import
 js/app.js                       Bootstraps everything and routing
 manifest.json                   PWA manifest
 sw.js                             Minimal service worker (offline app shell cache)
-icons/icon.svg, icon-192.png, icon-512.png   App icons (placeholders - swap with your logo)
+icons/icon-192.png, icon-512.png, icon-maskable-512.png   App icons (S.R logo)
 ```
 
 ## Features

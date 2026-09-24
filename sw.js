@@ -1,4 +1,4 @@
-const CACHE_NAME = "karakhana-v5";
+const CACHE_NAME = "karakhana-v6";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -19,9 +19,9 @@ const APP_SHELL = [
   "./js/profile.js",
   "./js/app.js",
   "./manifest.json",
-  "./icons/icon.svg",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+  "./icons/icon-maskable-512.png",
 ];
 
 self.addEventListener("install", (event) => {

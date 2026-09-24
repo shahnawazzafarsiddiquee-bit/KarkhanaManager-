@@ -16,7 +16,7 @@
   "launchHandlerClientMode": "",
   "startUrl": "/KarkhanaManager-/index.html",
   "iconUrl": "https://shahnawazzafarsiddiquee-bit.github.io/KarkhanaManager-/icons/icon-512.png",
-  "maskableIconUrl": "https://shahnawazzafarsiddiquee-bit.github.io/KarkhanaManager-/icons/icon-512.png",
+  "maskableIconUrl": "https://shahnawazzafarsiddiquee-bit.github.io/KarkhanaManager-/icons/icon-maskable-512.png",
   "appVersionName": "1.0.0",
   "appVersionCode": 1,
   "shortcuts": [],
