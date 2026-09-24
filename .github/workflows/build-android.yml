@@ -11,6 +11,8 @@ on:
     branches: [main]
     paths:
       - 'twa-manifest.json'
+      - 'manifest.json'
+      - 'icons/**'
       - '.github/workflows/build-android.yml'
 
 permissions:
@@ -110,6 +112,20 @@ jobs:
             fs.writeFileSync("twa-manifest.json", JSON.stringify(m, null, 2));
             console.log("Building versionCode", m.appVersionCode, "/", m.appVersionName);
           '
+
+      # Bubblewrap takes the launcher icons from the live site, so a build that
+      # starts before GitHub Pages has deployed this commit would ship the old icon.
+      - name: Wait for GitHub Pages to serve this commit's icon
+        run: |
+          url=$(node -p 'require("./twa-manifest.json").iconUrl')
+          want=$(sha256sum icons/icon-512.png | cut -d" " -f1)
+          for i in $(seq 1 45); do
+            got=$(curl -fsSL "$url" | sha256sum | cut -d" " -f1)
+            if [ "$got" = "$want" ]; then echo "Live icon matches this commit."; exit 0; fi
+            echo "Pages is still serving an older icon ($i/45), waiting 20s..."
+            sleep 20
+          done
+          echo "::warning::Live icon still differs after 15 minutes - the build may carry an older icon. Re-run once Pages has deployed."
 
       - name: Generate Android project
         run: bubblewrap update --skipVersionUpgrade
